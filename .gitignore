@@ -39,3 +39,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+cortex-local-demo-v3/node_modules/
+cortex-local-demo-v3/.next/
+cortex-local-demo-v3/node_modules/
+cortex-local-demo-v3/.next/
