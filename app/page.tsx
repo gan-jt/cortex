@@ -8,6 +8,7 @@ import { ApprovalPanel } from "@/components/approval/approval-panel";
 import { useApprovalDecision } from "@/hooks/use-approval-decision";
 import { useTaskSubmission } from "@/hooks/use-task-submission";
 import { ApprovalHistory } from "@/components/approval/approval-history";
+import { ClarificationPanel } from "@/components/task/clarification-panel";
 
 const EXAMPLE_TASKS = [
   {
@@ -65,6 +66,30 @@ export default function Home() {
       await submitTask(description);
     } catch {
       // The hook exposes the error for display below.
+    }
+  }
+
+  async function handleClarification(
+    details: string,
+  ) {
+    const originalTask =
+      result?.task.description ??
+      description.trim();
+
+    const expandedDescription = [
+      originalTask,
+      "",
+      "Additional context:",
+      details,
+    ].join("\n");
+
+    setDescription(expandedDescription);
+    clearDecision();
+
+    try {
+      await submitTask(expandedDescription);
+    } catch {
+      // The submission hook displays the error.
     }
   }
 
@@ -202,6 +227,18 @@ export default function Home() {
                 </div>
               </div>
             </section>
+
+            {result.status === "NEEDS_CLARIFICATION" &&
+              clarificationQuestions.length > 0 && (
+                <ClarificationPanel
+                  key={result.task.description}
+                  questions={clarificationQuestions}
+                  isSubmitting={isSubmitting}
+                  onContinue={(details) => {
+                    void handleClarification(details);
+                  }}
+                />
+              )}
 
             {result.status === "WAITING_APPROVAL" &&
               result.approvalPreview && (
