@@ -6,6 +6,7 @@ import {
   useState,
 } from "react";
 
+import type { ApprovalPreview } from "@/types/approval";
 import { saveFocusHandoff } from "@/lib/focus-handoff";
 import type { FocusPlan } from "@/types/focus";
 import type { RouteDecision } from "@/types/task";
@@ -34,6 +35,7 @@ export interface CortexTaskResponse {
   execution?: CortexExecutionResult | null;
   focusPlan?: FocusPlan | null;
   clarificationQuestions?: string[];
+  approvalPreview?: ApprovalPreview | null;
 }
 
 function isRecord(
