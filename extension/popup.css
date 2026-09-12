@@ -1,0 +1,161 @@
+:root {
+  color-scheme: dark;
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system,
+    BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  width: 340px;
+  margin: 0;
+  background: #020617;
+  color: #f8fafc;
+}
+
+.panel {
+  padding: 20px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.eyebrow {
+  margin: 0 0 4px;
+  color: #22d3ee;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+}
+
+h1 {
+  margin: 0;
+  font-size: 24px;
+}
+
+h2 {
+  margin: 0 0 10px;
+  font-size: 14px;
+}
+
+.status {
+  margin: 18px 0;
+  border: 1px solid #334155;
+  border-radius: 10px;
+  background: #0f172a;
+  padding: 12px;
+  color: #cbd5e1;
+  font-size: 13px;
+}
+
+.status.active {
+  border-color: #0891b2;
+  color: #67e8f9;
+}
+
+.section {
+  margin-top: 18px;
+}
+
+.domain-list {
+  display: grid;
+  gap: 7px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.domain-list li {
+  border-radius: 8px;
+  background: #0f172a;
+  padding: 9px 11px;
+  color: #cbd5e1;
+  font-size: 12px;
+}
+
+.summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 18px;
+  border-top: 1px solid #1e293b;
+  padding-top: 16px;
+}
+
+.summary-label {
+  display: block;
+  margin-bottom: 3px;
+  color: #94a3b8;
+  font-size: 11px;
+}
+
+#attempt-count {
+  font-size: 24px;
+}
+
+button {
+  cursor: pointer;
+  border: 1px solid #475569;
+  border-radius: 8px;
+  background: #1e293b;
+  padding: 7px 12px;
+  color: #f8fafc;
+}
+
+button:disabled {
+  cursor: wait;
+  opacity: 0.5;
+}
+
+.error {
+  margin: 14px 0 0;
+  color: #fca5a5;
+  font-size: 12px;
+}
+
+.switch {
+  position: relative;
+  width: 48px;
+  height: 26px;
+}
+
+.switch input {
+  width: 0;
+  height: 0;
+  opacity: 0;
+}
+
+.slider {
+  position: absolute;
+  inset: 0;
+  cursor: pointer;
+  border-radius: 999px;
+  background: #334155;
+  transition: 160ms ease;
+}
+
+.slider::before {
+  position: absolute;
+  bottom: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: white;
+  content: "";
+  transition: 160ms ease;
+}
+
+.switch input:checked + .slider {
+  background: #0891b2;
+}
+
+.switch input:checked + .slider::before {
+  transform: translateX(22px);
+}
