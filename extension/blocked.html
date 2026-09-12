@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1"
+    />
+    <title>Stay Focused | Cortex</title>
+    <link rel="stylesheet" href="blocked.css" />
+  </head>
+
+  <body>
+    <main class="page">
+      <div class="orb" aria-hidden="true">
+        <span></span>
+      </div>
+
+      <p class="eyebrow">CORTEX FOCUS LOCK</p>
+
+      <h1>This can wait.</h1>
+
+      <p class="message">
+        Corty blocked
+        <strong id="blocked-site">this website</strong>
+        to protect your focus session.
+      </p>
+
+      <section class="counter">
+        <span>Distractions blocked</span>
+        <strong id="attempt-count">...</strong>
+      </section>
+
+      <div class="actions">
+        <button id="dashboard-button" type="button">
+          Return to Cortex
+        </button>
+
+        <button
+          id="disable-button"
+          class="secondary"
+          type="button"
+        >
+          End Focus Lock
+        </button>
+      </div>
+
+      <p id="status-message" class="status"></p>
+    </main>
+
+    <script src="blocked.js"></script>
+  </body>
+</html>

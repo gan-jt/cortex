@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1"
+    />
+    <title>Cortex Focus Lock</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+
+  <body>
+    <main class="panel">
+      <header class="header">
+        <div>
+          <p class="eyebrow">CORTEX</p>
+          <h1>Focus Lock</h1>
+        </div>
+
+        <label class="switch">
+          <input id="enabled-toggle" type="checkbox" />
+          <span class="slider"></span>
+        </label>
+      </header>
+
+      <p id="status-message" class="status">
+        Loading extension state...
+      </p>
+
+      <section class="section">
+        <h2>Blocked websites</h2>
+        <ul id="domain-list" class="domain-list"></ul>
+      </section>
+
+      <section class="summary">
+        <div>
+          <span class="summary-label">
+            Distractions blocked
+          </span>
+          <strong id="attempt-count">0</strong>
+        </div>
+
+        <button id="reset-button" type="button">
+          Reset
+        </button>
+      </section>
+
+      <p id="error-message" class="error" hidden></p>
+    </main>
+
+    <script src="popup.js"></script>
+  </body>
+</html>
