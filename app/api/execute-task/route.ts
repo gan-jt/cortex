@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { routeTaskWithAI } from "@/lib/ai-task-router";
+import { createFocusPlanWithAI } from "@/lib/focus-planner";
 import { executeTaskWithAI } from "@/lib/task-executor";
 import { routeTask } from "@/lib/task-router";
 import type { RouteDecision } from "@/types/task";
@@ -40,17 +41,63 @@ export async function POST(request: Request) {
     routingSource = "rules-fallback";
   }
 
-  if (decision.mode !== "AUTO") {
+  if (decision.mode === "APPROVAL") {
     return NextResponse.json({
       task: { description },
       decision,
       routingSource,
-      status:
-        decision.mode === "APPROVAL"
-          ? "WAITING_APPROVAL"
-          : "NEEDS_FOCUS",
+      status: "WAITING_APPROVAL",
       execution: null,
+      focusPlan: null,
     });
+  }
+
+  if (decision.mode === "FOCUS") {
+    const needsClarification =
+      decision.missingInformation.length > 0;
+
+    if (needsClarification) {
+      return NextResponse.json({
+        task: { description },
+        decision,
+        routingSource,
+        status: "NEEDS_CLARIFICATION",
+        clarificationQuestions: decision.missingInformation,
+        execution: null,
+        focusPlan: null,
+      });
+    }
+
+    try {
+      const focusPlan = await createFocusPlanWithAI({
+        description,
+        suggestedDurationMinutes:
+          decision.suggestedDurationMinutes,
+        missingInformation: decision.missingInformation,
+      });
+
+      return NextResponse.json({
+        task: { description },
+        decision,
+        routingSource,
+        status: "FOCUS_READY",
+        execution: null,
+        focusPlan,
+      });
+    } catch (error) {
+      console.error("Focus planning failed:", error);
+
+      return NextResponse.json(
+        {
+          error: "Cortex could not create a focus plan.",
+          task: { description },
+          decision,
+          routingSource,
+          status: "FAILED",
+        },
+        { status: 502 },
+      );
+    }
   }
 
   try {
@@ -62,6 +109,7 @@ export async function POST(request: Request) {
       routingSource,
       status: "COMPLETED",
       execution,
+      focusPlan: null,
     });
   } catch (error) {
     console.error("Task execution failed:", error);
