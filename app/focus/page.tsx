@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useFocusProfile } from "@/hooks/use-focus-profile";
+import { FocusAssistancePanel } from "@/components/focus/focus-assistance-panel";
+import { useFocusAssistant } from "@/hooks/use-focus-assistant";
 
 import { useFocusLock } from "@/hooks/use-focus-lock";
 import { useFocusSession } from "@/hooks/use-focus-session";
@@ -30,6 +32,12 @@ const PET_SYMBOLS = {
   GUARDIAN: "✹",
 } as const;
 
+const ASSISTANCE_BUTTON_LABELS = {
+  USER: "Guide me",
+  CORTEX: "Draft it",
+  TOGETHER: "Work together",
+} as const;
+
 export default function FocusPage() {
   const [handoffChecked, setHandoffChecked] =
     useState(false);
@@ -48,6 +56,18 @@ export default function FocusPage() {
     toggleStep,
     clear,
   } = useFocusSession();
+
+  const {
+    assistanceByStep,
+    stepContexts,
+    loadingStepOrder,
+    error: assistanceError,
+    isLoaded: isAssistanceLoaded,
+    requestAssistance,
+    setStepContext,
+    clearStepAssistance,
+    clearAllAssistance,
+  } = useFocusAssistant(session?.id ?? null);
 
   const {
     profile,
@@ -115,6 +135,11 @@ export default function FocusPage() {
     reward,
     session,
   ]);
+
+  function handleClearSession() {
+    clearAllAssistance();
+    clear();
+  }
 
   if (!isLoaded || !handoffChecked || !isProfileLoaded) {
     return (
@@ -248,7 +273,7 @@ export default function FocusPage() {
               session.status === "CANCELLED") && (
                 <button
                   className={secondaryButton}
-                  onClick={clear}
+                  onClick={handleClearSession}
                 >
                   Clear Session
                 </button>
@@ -269,54 +294,104 @@ export default function FocusPage() {
             </div>
 
             <div className="mt-5 space-y-4">
+              {assistanceError && (
+                <p className="rounded-lg bg-red-950 p-3 text-sm text-red-300">
+                  {assistanceError}
+                </p>
+              )}
+
               {session.plan.steps.map((step) => {
                 const isCompleted =
-                  session.completedStepOrders.includes(
-                    step.order,
-                  );
+                  session.completedStepOrders.includes(step.order);
+
+                const isSessionFinished =
+                  session.status === "COMPLETED" ||
+                  session.status === "CANCELLED";
+
+                const assistance =
+                  assistanceByStep[step.order];
+
+                const isLoadingAssistance =
+                  loadingStepOrder === step.order;
 
                 return (
-                  <label
-                    className="flex cursor-pointer gap-4 rounded-xl border border-slate-700 p-4"
+                  <article
+                    className="rounded-xl border border-slate-700 p-4"
                     key={step.order}
                   >
-                    <input
-                      className="mt-1"
-                      type="checkbox"
-                      checked={isCompleted}
-                      disabled={
-                        session.status === "COMPLETED" ||
-                        session.status === "CANCELLED"
-                      }
-                      onChange={() =>
-                        toggleStep(step.order)
-                      }
-                    />
+                    <div className="flex gap-4">
+                      <input
+                        aria-label={`Complete step ${step.order}`}
+                        className="mt-1"
+                        type="checkbox"
+                        checked={isCompleted}
+                        disabled={isSessionFinished}
+                        onChange={() => toggleStep(step.order)}
+                      />
 
-                    <span>
-                      <span className="flex flex-wrap items-center gap-2">
-                        <strong>
-                          {step.order}. {step.title}
-                        </strong>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <strong>
+                            {step.order}. {step.title}
+                          </strong>
 
-                        <span className="rounded-full bg-slate-800 px-2 py-1 text-xs text-cyan-300">
-                          {step.owner}
-                        </span>
+                          <span className="rounded-full bg-slate-800 px-2 py-1 text-xs text-cyan-300">
+                            {step.owner}
+                          </span>
 
-                        <span className="text-xs text-slate-500">
-                          {step.estimatedMinutes} min
-                        </span>
-                      </span>
+                          <span className="text-xs text-slate-500">
+                            {step.estimatedMinutes} min
+                          </span>
+                        </div>
 
-                      <span className="mt-2 block text-slate-300">
-                        {step.instruction}
-                      </span>
+                        <p className="mt-2 text-slate-300">
+                          {step.instruction}
+                        </p>
 
-                      <span className="mt-2 block text-sm text-slate-500">
-                        Done when: {step.doneWhen}
-                      </span>
-                    </span>
-                  </label>
+                        <p className="mt-2 text-sm text-slate-500">
+                          Done when: {step.doneWhen}
+                        </p>
+
+                        <FocusAssistancePanel
+                          assistance={assistance}
+                          buttonLabel={
+                            ASSISTANCE_BUTTON_LABELS[step.owner]
+                          }
+                          disabled={isSessionFinished || isCompleted || !isAssistanceLoaded}
+                          isLoading={isLoadingAssistance}
+                          userContext={
+                            stepContexts[step.order] ?? ""
+                          }
+                          onUserContextChange={(value) => {
+                            setStepContext(step.order, value);
+                          }}
+                          onRequest={() => {
+                            void requestAssistance({
+                              sessionId: session.id,
+                              taskDescription:
+                                session.taskDescription,
+                              objective: session.plan.objective,
+                              step: {
+                                order: step.order,
+                                title: step.title,
+                                owner: step.owner,
+                                instruction: step.instruction,
+                                cortexSupport:
+                                  step.cortexSupport,
+                                doneWhen: step.doneWhen,
+                              },
+                              userContext:
+                                stepContexts[step.order]?.trim() ||
+                                undefined,
+                            });
+                          }}
+                          onClear={() =>
+                            clearStepAssistance(step.order)
+                          }
+                        />
+                      </div>
+                    </div>
+                  </article>
                 );
               })}
             </div>
