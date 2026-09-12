@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useFocusProfile } from "@/hooks/use-focus-profile";
 
 import { useFocusLock } from "@/hooks/use-focus-lock";
 import { useFocusSession } from "@/hooks/use-focus-session";
@@ -22,6 +23,13 @@ const primaryButton =
 const secondaryButton =
   "rounded-lg border border-slate-600 px-4 py-2 text-white disabled:opacity-50";
 
+const PET_SYMBOLS = {
+  SEED: "●",
+  SPROUT: "✦",
+  COMPANION: "◆",
+  GUARDIAN: "✹",
+} as const;
+
 export default function FocusPage() {
   const [handoffChecked, setHandoffChecked] =
     useState(false);
@@ -40,6 +48,14 @@ export default function FocusPage() {
     toggleStep,
     clear,
   } = useFocusSession();
+
+  const {
+    profile,
+    progress,
+    lastRewardReceipt,
+    isLoaded: isProfileLoaded,
+    awardCompletedSession,
+  } = useFocusProfile();
 
   const {
     lockState,
@@ -76,7 +92,31 @@ export default function FocusPage() {
     isLoaded,
   ]);
 
-  if (!isLoaded || !handoffChecked) {
+  useEffect(() => {
+    if (
+      !isProfileLoaded ||
+      !session ||
+      session.status !== "COMPLETED" ||
+      !reward
+    ) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      awardCompletedSession(session, reward);
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [
+    awardCompletedSession,
+    isProfileLoaded,
+    reward,
+    session,
+  ]);
+
+  if (!isLoaded || !handoffChecked || !isProfileLoaded) {
     return (
       <main className="min-h-screen bg-slate-950 p-8 text-white">
         <p className="text-slate-300">
@@ -206,13 +246,13 @@ export default function FocusPage() {
 
             {(session.status === "COMPLETED" ||
               session.status === "CANCELLED") && (
-              <button
-                className={secondaryButton}
-                onClick={clear}
-              >
-                Clear Session
-              </button>
-            )}
+                <button
+                  className={secondaryButton}
+                  onClick={clear}
+                >
+                  Clear Session
+                </button>
+              )}
           </div>
         </section>
 
@@ -244,6 +284,10 @@ export default function FocusPage() {
                       className="mt-1"
                       type="checkbox"
                       checked={isCompleted}
+                      disabled={
+                        session.status === "COMPLETED" ||
+                        session.status === "CANCELLED"
+                      }
                       onChange={() =>
                         toggleStep(step.order)
                       }
@@ -319,6 +363,64 @@ export default function FocusPage() {
               </button>
             </section>
 
+            <section className="rounded-2xl border border-violet-700 bg-slate-900 p-6">
+              <h2 className="text-xl font-bold">
+                Cortex Companion
+              </h2>
+
+              <div className="mt-5 text-center">
+                <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-full bg-violet-500 text-5xl shadow-[0_0_45px_rgba(139,92,246,0.55)]">
+                  {PET_SYMBOLS[progress.petStage]}
+                </div>
+
+                <p className="mt-4 text-lg font-bold text-violet-200">
+                  {progress.petStage}
+                </p>
+
+                <p className="text-sm text-slate-400">
+                  Level {progress.level}
+                </p>
+              </div>
+
+              <div className="mt-5 h-2 overflow-hidden rounded-full bg-slate-800">
+                <div
+                  className="h-full bg-violet-400 transition-all"
+                  style={{
+                    width: `${progress.levelProgressPercent}%`,
+                  }}
+                />
+              </div>
+
+              <div className="mt-3 flex justify-between text-sm text-slate-400">
+                <span>{profile?.totalXp ?? 0} total XP</span>
+
+                <span>
+                  {progress.xpIntoLevel}/
+                  {progress.xpForNextLevel}
+                </span>
+              </div>
+
+              <div className="mt-5 grid grid-cols-2 gap-3 text-center">
+                <div className="rounded-lg bg-slate-950 p-3">
+                  <p className="text-xl font-bold">
+                    {profile?.completedSessions ?? 0}
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    Sessions
+                  </p>
+                </div>
+
+                <div className="rounded-lg bg-slate-950 p-3">
+                  <p className="text-xl font-bold">
+                    {profile?.currentStreakDays ?? 0}
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    Day streak
+                  </p>
+                </div>
+              </div>
+            </section>
+
             <section className="rounded-2xl border border-slate-700 bg-slate-900 p-6">
               <h2 className="text-xl font-bold">
                 Blocked Sites
@@ -344,7 +446,10 @@ export default function FocusPage() {
             </h2>
 
             <p className="mt-2 text-xl text-emerald-200">
-              +{reward.xpEarned} XP
+              +{lastRewardReceipt?.xpAwarded ?? reward.xpEarned} XP
+            </p>
+            <p className="mt-2 text-sm text-emerald-300">
+              Level {progress.level} · {progress.petStage}
             </p>
 
             <p className="mt-2 text-sm text-emerald-300">
