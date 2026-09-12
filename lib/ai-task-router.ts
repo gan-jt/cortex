@@ -15,7 +15,7 @@ const RouteDecisionSchema = z.object({
   suggestedDurationMinutes: z.number().int().min(5).max(180).nullable(),
 });
 
-const highRiskKeywords = [
+const highRiskActions = [
   "send",
   "delete",
   "publish",
@@ -29,7 +29,18 @@ const highRiskKeywords = [
 ];
 
 function containsHighRiskAction(description: string): boolean {
-  return highRiskKeywords.some((keyword) => description.includes(keyword));
+  const instruction = description
+    .split(/[:\n]/, 1)[0]
+    .trim()
+    .replace(
+      /^(?:please\s+|kindly\s+)?(?:(?:can|could|would)\s+you\s+)?(?:please\s+)?/,
+      "",
+    );
+
+  return highRiskActions.some(
+    (action) =>
+      instruction === action || instruction.startsWith(`${action} `),
+  );
 }
 
 export async function routeTaskWithAI(
