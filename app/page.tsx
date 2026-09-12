@@ -4,8 +4,10 @@ import {
   type FormEvent,
   useState,
 } from "react";
-
+import { ApprovalPanel } from "@/components/approval/approval-panel";
+import { useApprovalDecision } from "@/hooks/use-approval-decision";
 import { useTaskSubmission } from "@/hooks/use-task-submission";
+import { ApprovalHistory } from "@/components/approval/approval-history";
 
 const EXAMPLE_TASKS = [
   {
@@ -37,6 +39,17 @@ export default function Home() {
     clearResult,
   } = useTaskSubmission();
 
+  const {
+    approvalRecord,
+    history,
+    isHistoryLoaded,
+    isSubmitting: isApprovalSubmitting,
+    error: approvalError,
+    submitDecision,
+    clearDecision,
+    clearHistory,
+  } = useApprovalDecision();
+
   const clarificationQuestions =
     result?.clarificationQuestions ??
     result?.decision.missingInformation ??
@@ -46,6 +59,7 @@ export default function Home() {
     event: FormEvent<HTMLFormElement>,
   ) {
     event.preventDefault();
+    clearDecision();
 
     try {
       await submitTask(description);
@@ -90,6 +104,7 @@ export default function Home() {
               onChange={(event) => {
                 setDescription(event.target.value);
                 clearResult();
+                clearDecision();
               }}
             />
 
@@ -102,6 +117,7 @@ export default function Home() {
                   onClick={() => {
                     setDescription(example.description);
                     clearResult();
+                    clearDecision();
                   }}
                 >
                   {example.label}
@@ -187,6 +203,31 @@ export default function Home() {
               </div>
             </section>
 
+            {result.status === "WAITING_APPROVAL" &&
+              result.approvalPreview && (
+                <ApprovalPanel
+                  key={result.approvalPreview.id}
+                  preview={result.approvalPreview}
+                  approvalRecord={approvalRecord}
+                  error={approvalError}
+                  isSubmitting={isApprovalSubmitting}
+                  onApprove={(note) => {
+                    void submitDecision({
+                      preview: result.approvalPreview!,
+                      decision: "APPROVED",
+                      note,
+                    });
+                  }}
+                  onReject={(note) => {
+                    void submitDecision({
+                      preview: result.approvalPreview!,
+                      decision: "REJECTED",
+                      note,
+                    });
+                  }}
+                />
+              )}
+
             {result.status === "COMPLETED" &&
               result.execution && (
                 <section className="rounded-2xl border border-emerald-800 bg-emerald-950 p-6">
@@ -208,63 +249,71 @@ export default function Home() {
 
                   {result.execution
                     .verificationChecklist.length > 0 && (
-                    <div className="mt-5">
-                      <h3 className="font-bold">
-                        Verification
-                      </h3>
+                      <div className="mt-5">
+                        <h3 className="font-bold">
+                          Verification
+                        </h3>
 
-                      <ul className="mt-2 list-disc space-y-1 pl-5 text-emerald-100">
-                        {result.execution.verificationChecklist.map(
-                          (item) => (
-                            <li key={item}>{item}</li>
-                          ),
-                        )}
-                      </ul>
-                    </div>
-                  )}
+                        <ul className="mt-2 list-disc space-y-1 pl-5 text-emerald-100">
+                          {result.execution.verificationChecklist.map(
+                            (item) => (
+                              <li key={item}>{item}</li>
+                            ),
+                          )}
+                        </ul>
+                      </div>
+                    )}
                 </section>
               )}
 
             {result.status ===
               "WAITING_APPROVAL" && (
-              <section className="rounded-2xl border border-amber-700 bg-amber-950 p-6">
-                <p className="text-sm font-semibold uppercase tracking-wider text-amber-300">
-                  Approval required
-                </p>
+                <section className="rounded-2xl border border-amber-700 bg-amber-950 p-6">
+                  <p className="text-sm font-semibold uppercase tracking-wider text-amber-300">
+                    Approval required
+                  </p>
 
-                <h2 className="mt-3 text-2xl font-bold">
-                  Cortex stopped before the external action.
-                </h2>
+                  <h2 className="mt-3 text-2xl font-bold">
+                    Cortex stopped before the external action.
+                  </h2>
 
-                <p className="mt-3 text-amber-100">
-                  Review and approve the action before it is
-                  executed.
-                </p>
-              </section>
-            )}
+                  <p className="mt-3 text-amber-100">
+                    Review and approve the action before it is
+                    executed.
+                  </p>
+                </section>
+              )}
 
             {result.status ===
               "NEEDS_CLARIFICATION" && (
-              <section className="rounded-2xl border border-violet-700 bg-violet-950 p-6">
-                <p className="text-sm font-semibold uppercase tracking-wider text-violet-300">
-                  More information needed
-                </p>
+                <section className="rounded-2xl border border-violet-700 bg-violet-950 p-6">
+                  <p className="text-sm font-semibold uppercase tracking-wider text-violet-300">
+                    More information needed
+                  </p>
 
-                <h2 className="mt-3 text-2xl font-bold">
-                  Clarify these points
-                </h2>
+                  <h2 className="mt-3 text-2xl font-bold">
+                    Clarify these points
+                  </h2>
 
-                <ul className="mt-4 list-disc space-y-2 pl-5 text-violet-100">
-                  {clarificationQuestions.map(
-                    (question) => (
-                      <li key={question}>{question}</li>
-                    ),
-                  )}
-                </ul>
-              </section>
-            )}
+                  <ul className="mt-4 list-disc space-y-2 pl-5 text-violet-100">
+                    {clarificationQuestions.map(
+                      (question) => (
+                        <li key={question}>{question}</li>
+                      ),
+                    )}
+                  </ul>
+                </section>
+              )}
           </div>
         )}
+
+        <div className="mt-10">
+          <ApprovalHistory
+            records={history}
+            isLoaded={isHistoryLoaded}
+            onClear={clearHistory}
+          />
+        </div>
       </div>
     </main>
   );

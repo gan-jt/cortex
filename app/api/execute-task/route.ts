@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { routeTaskWithAI } from "@/lib/ai-task-router";
+import { createApprovalPreviewWithAI } from "@/lib/approval-preview";
 import { createFocusPlanWithAI } from "@/lib/focus-planner";
 import { executeTaskWithAI } from "@/lib/task-executor";
 import { routeTask } from "@/lib/task-router";
@@ -42,14 +43,37 @@ export async function POST(request: Request) {
   }
 
   if (decision.mode === "APPROVAL") {
-    return NextResponse.json({
-      task: { description },
-      decision,
-      routingSource,
-      status: "WAITING_APPROVAL",
-      execution: null,
-      focusPlan: null,
-    });
+    try {
+      const approvalPreview =
+        await createApprovalPreviewWithAI(description);
+
+      return NextResponse.json({
+        task: { description },
+        decision,
+        routingSource,
+        status: "WAITING_APPROVAL",
+        approvalPreview,
+        execution: null,
+        focusPlan: null,
+      });
+    } catch (error) {
+      console.error(
+        "Approval preview generation failed:",
+        error,
+      );
+
+      return NextResponse.json(
+        {
+          error:
+            "Cortex could not create an approval preview.",
+          task: { description },
+          decision,
+          routingSource,
+          status: "FAILED",
+        },
+        { status: 502 },
+      );
+    }
   }
 
   if (decision.mode === "FOCUS") {
