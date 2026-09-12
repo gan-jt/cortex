@@ -4,11 +4,15 @@ import {
   type FormEvent,
   useState,
 } from "react";
-import { ApprovalPanel } from "@/components/approval/approval-panel";
-import { useApprovalDecision } from "@/hooks/use-approval-decision";
-import { useTaskSubmission } from "@/hooks/use-task-submission";
+
 import { ApprovalHistory } from "@/components/approval/approval-history";
+import { ApprovalPanel } from "@/components/approval/approval-panel";
+import { PaperResearchForm } from "@/components/research/paper-research-form";
+import { ResearchReportPanel } from "@/components/research/research-report-panel";
 import { ClarificationPanel } from "@/components/task/clarification-panel";
+import { useApprovalDecision } from "@/hooks/use-approval-decision";
+import { usePaperResearch } from "@/hooks/use-paper-research";
+import { useTaskSubmission } from "@/hooks/use-task-submission";
 
 const EXAMPLE_TASKS = [
   {
@@ -51,6 +55,16 @@ export default function Home() {
     clearHistory,
   } = useApprovalDecision();
 
+  const {
+    report: researchReport,
+    error: researchError,
+    focusError,
+    isAnalyzing,
+    isCreatingFocus,
+    analyzePaper,
+    startFocusFromReport,
+  } = usePaperResearch();
+
   const clarificationQuestions =
     result?.clarificationQuestions ??
     result?.decision.missingInformation ??
@@ -92,6 +106,8 @@ export default function Home() {
       // The submission hook displays the error.
     }
   }
+
+
 
   return (
     <main className="min-h-screen bg-slate-950 px-6 py-12 text-white">
@@ -250,14 +266,16 @@ export default function Home() {
                   isSubmitting={isApprovalSubmitting}
                   onApprove={(note) => {
                     void submitDecision({
-                      preview: result.approvalPreview!,
+                      preview:
+                        result.approvalPreview!,
                       decision: "APPROVED",
                       note,
                     });
                   }}
                   onReject={(note) => {
                     void submitDecision({
-                      preview: result.approvalPreview!,
+                      preview:
+                        result.approvalPreview!,
                       decision: "REJECTED",
                       note,
                     });
@@ -285,7 +303,8 @@ export default function Home() {
                   </div>
 
                   {result.execution
-                    .verificationChecklist.length > 0 && (
+                    .verificationChecklist.length >
+                    0 && (
                       <div className="mt-5">
                         <h3 className="font-bold">
                           Verification
@@ -294,7 +313,9 @@ export default function Home() {
                         <ul className="mt-2 list-disc space-y-1 pl-5 text-emerald-100">
                           {result.execution.verificationChecklist.map(
                             (item) => (
-                              <li key={item}>{item}</li>
+                              <li key={item}>
+                                {item}
+                              </li>
                             ),
                           )}
                         </ul>
@@ -335,7 +356,9 @@ export default function Home() {
                   <ul className="mt-4 list-disc space-y-2 pl-5 text-violet-100">
                     {clarificationQuestions.map(
                       (question) => (
-                        <li key={question}>{question}</li>
+                        <li key={question}>
+                          {question}
+                        </li>
                       ),
                     )}
                   </ul>
@@ -343,6 +366,27 @@ export default function Home() {
               )}
           </div>
         )}
+
+        <div className="mt-10 space-y-6">
+          <PaperResearchForm
+            error={researchError}
+            isAnalyzing={isAnalyzing}
+            onAnalyze={analyzePaper}
+          />
+
+          {researchReport && (
+            <ResearchReportPanel
+              report={researchReport}
+              focusError={focusError}
+              isStartingFocus={isCreatingFocus}
+              onStartFocus={() => {
+                void startFocusFromReport(
+                  researchReport,
+                );
+              }}
+            />
+          )}
+        </div>
 
         <div className="mt-10">
           <ApprovalHistory
