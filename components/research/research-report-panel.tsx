@@ -1,3 +1,12 @@
+"use client";
+
+import {
+  CheckIcon,
+  FileIcon,
+  FocusIcon,
+  SparklesIcon,
+} from "@/components/icons";
+
 import type {
   ResearchEvidenceStrength,
   ResearchReport,
@@ -10,16 +19,13 @@ interface ResearchReportPanelProps {
   onStartFocus: () => void;
 }
 
-const evidenceStyles: Record<
+const evidenceClasses: Record<
   ResearchEvidenceStrength,
   string
 > = {
-  STRONG:
-    "bg-emerald-950 text-emerald-300",
-  MODERATE:
-    "bg-amber-950 text-amber-300",
-  LIMITED:
-    "bg-red-950 text-red-300",
+  STRONG: "evidence-strong",
+  MODERATE: "evidence-moderate",
+  LIMITED: "evidence-limited",
 };
 
 export function ResearchReportPanel({
@@ -36,284 +42,250 @@ export function ResearchReportPanel({
     .join(" · ");
 
   return (
-    <section className="rounded-2xl border border-violet-700 bg-slate-900 p-6 text-white md:p-8">
-      <div className="flex flex-wrap items-start justify-between gap-4">
+    <section className="research-report-card panel">
+      <div className="research-report-glow" />
+
+      <header className="research-report-header">
         <div>
-          <p className="text-sm font-semibold uppercase tracking-wider text-violet-300">
+          <p className="eyebrow research-eyebrow">
             Research Report
           </p>
 
-          <h2 className="mt-3 text-3xl font-bold">
-            {report.paper.title}
-          </h2>
+          <h2>{report.paper.title}</h2>
 
-          <p className="mt-2 text-slate-400">
-            {report.filename}
-          </p>
+          <p>{report.filename}</p>
         </div>
 
-        <span className="rounded-full bg-emerald-950 px-3 py-1 text-sm font-semibold text-emerald-300">
-          Analysis Complete
+        <span className="research-complete-badge">
+          <CheckIcon />
+          Analysis complete
         </span>
-      </div>
+      </header>
 
-      <div className="mt-6 rounded-xl bg-slate-950 p-5">
-        <p className="text-sm font-semibold text-slate-400">
-          Paper information
-        </p>
-
-        <dl className="mt-3 space-y-3 text-sm">
-          <div>
-            <dt className="text-slate-500">
-              Authors
-            </dt>
-            <dd className="mt-1 text-slate-200">
-              {report.paper.authors.length > 0
-                ? report.paper.authors.join(", ")
-                : "Not identified"}
-            </dd>
+      <div className="research-report-layout">
+        <aside className="research-report-sidebar">
+          <div className="research-paper-icon">
+            <FileIcon />
           </div>
 
-          <div>
-            <dt className="text-slate-500">
-              Publication
-            </dt>
-            <dd className="mt-1 text-slate-200">
-              {publicationDetails ||
-                "Not identified"}
-            </dd>
-          </div>
+          <h3>Paper details</h3>
 
-          <div>
-            <dt className="text-slate-500">
-              DOI
-            </dt>
-            <dd className="mt-1 text-slate-200">
-              {report.paper.doi ??
-                "Not identified"}
-            </dd>
-          </div>
-        </dl>
-      </div>
+          <dl>
+            <div>
+              <dt>Authors</dt>
+              <dd>
+                {report.paper.authors.length > 0
+                  ? report.paper.authors.join(", ")
+                  : "Not identified"}
+              </dd>
+            </div>
 
-      <div className="mt-6">
-        <h3 className="text-xl font-bold">
-          Research Question
-        </h3>
+            <div>
+              <dt>Publication</dt>
+              <dd>
+                {publicationDetails ||
+                  "Not identified"}
+              </dd>
+            </div>
 
-        <p className="mt-3 leading-7 text-slate-300">
-          {report.researchQuestion}
-        </p>
-      </div>
-
-      <div className="mt-6">
-        <h3 className="text-xl font-bold">
-          Plain-Language Summary
-        </h3>
-
-        <p className="mt-3 leading-7 text-slate-300">
-          {report.plainLanguageSummary}
-        </p>
-      </div>
-
-      <div className="mt-6">
-        <h3 className="text-xl font-bold">
-          Key Findings
-        </h3>
-
-        <ol className="mt-3 space-y-3">
-          {report.keyFindings.map(
-            (finding, index) => (
-              <li
-                className="flex gap-3 rounded-lg bg-slate-950 p-4 text-slate-300"
-                key={`${finding}-${index}`}
-              >
-                <span className="font-bold text-violet-300">
-                  {index + 1}.
-                </span>
-
-                <span>{finding}</span>
-              </li>
-            ),
-          )}
-        </ol>
-      </div>
-
-      <div className="mt-6">
-        <h3 className="text-xl font-bold">
-          Methodology
-        </h3>
-
-        <dl className="mt-3 grid gap-4 md:grid-cols-2">
-          <div className="rounded-lg bg-slate-950 p-4">
-            <dt className="text-sm text-slate-500">
-              Study design
-            </dt>
-            <dd className="mt-2 text-slate-200">
-              {report.methodology.studyDesign}
-            </dd>
-          </div>
-
-          <div className="rounded-lg bg-slate-950 p-4">
-            <dt className="text-sm text-slate-500">
-              Sample or data
-            </dt>
-            <dd className="mt-2 text-slate-200">
-              {report.methodology.sampleOrData}
-            </dd>
-          </div>
-
-          <div className="rounded-lg bg-slate-950 p-4">
-            <dt className="text-sm text-slate-500">
-              Procedure
-            </dt>
-            <dd className="mt-2 text-slate-200">
-              {report.methodology.procedure}
-            </dd>
-          </div>
-
-          <div className="rounded-lg bg-slate-950 p-4">
-            <dt className="text-sm text-slate-500">
-              Analysis method
-            </dt>
-            <dd className="mt-2 text-slate-200">
-              {report.methodology.analysisMethod}
-            </dd>
-          </div>
-        </dl>
-      </div>
-
-      <div className="mt-6">
-        <h3 className="text-xl font-bold">
-          Evidence Map
-        </h3>
-
-        <div className="mt-3 space-y-4">
-          {report.evidenceMap.map(
-            (item, index) => (
-              <article
-                className="rounded-xl border border-slate-700 bg-slate-950 p-5"
-                key={`${item.claim}-${index}`}
-              >
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <h4 className="font-bold text-slate-100">
-                    {item.claim}
-                  </h4>
-
-                  <span
-                    className={`rounded-full px-3 py-1 text-xs font-semibold ${evidenceStyles[item.strength]}`}
-                  >
-                    {item.strength}
-                  </span>
-                </div>
-
-                <p className="mt-3 text-slate-300">
-                  {item.evidence}
-                </p>
-
-                {item.pageReferences.length >
-                  0 && (
-                    <p className="mt-3 text-sm text-slate-500">
-                      Pages:{" "}
-                      {item.pageReferences.join(
-                        ", ",
-                      )}
-                    </p>
-                  )}
-              </article>
-            ),
-          )}
-        </div>
-      </div>
-
-      <div className="mt-6 grid gap-6 md:grid-cols-2">
-        <div>
-          <h3 className="text-xl font-bold">
-            Limitations
-          </h3>
-
-          <ul className="mt-3 list-disc space-y-2 pl-5 text-slate-300">
-            {report.limitations.map(
-              (limitation, index) => (
-                <li
-                  key={`${limitation}-${index}`}
-                >
-                  {limitation}
-                </li>
-              ),
-            )}
-          </ul>
-        </div>
-
-        <div>
-          <h3 className="text-xl font-bold">
-            Important Terms
-          </h3>
-
-          <dl className="mt-3 space-y-3">
-            {report.importantTerms.map(
-              (item, index) => (
-                <div
-                  className="rounded-lg bg-slate-950 p-4"
-                  key={`${item.term}-${index}`}
-                >
-                  <dt className="font-semibold text-violet-300">
-                    {item.term}
-                  </dt>
-
-                  <dd className="mt-1 text-sm text-slate-300">
-                    {item.definition}
-                  </dd>
-                </div>
-              ),
-            )}
+            <div>
+              <dt>DOI</dt>
+              <dd>
+                {report.paper.doi ??
+                  "Not identified"}
+              </dd>
+            </div>
           </dl>
-        </div>
-      </div>
 
-      <div className="mt-6">
-        <h3 className="text-xl font-bold">
-          Further Questions
-        </h3>
+          <div className="research-sidebar-note">
+            <SparklesIcon />
 
-        <ul className="mt-3 list-disc space-y-2 pl-5 text-slate-300">
-          {report.furtherQuestions.map(
-            (question, index) => (
-              <li
-                key={`${question}-${index}`}
-              >
-                {question}
-              </li>
-            ),
+            <p>
+              Cortex separates extracted evidence from
+              interpretation and includes relevant page
+              references.
+            </p>
+          </div>
+        </aside>
+
+        <div className="research-report-content">
+          <section className="research-question-card">
+            <span>Research question</span>
+            <p>{report.researchQuestion}</p>
+          </section>
+
+          <section className="research-report-section">
+            <div className="research-section-heading">
+              <span>01</span>
+              <h3>Plain-Language Summary</h3>
+            </div>
+
+            <p className="research-summary">
+              {report.plainLanguageSummary}
+            </p>
+          </section>
+
+          <section className="research-report-section">
+            <div className="research-section-heading">
+              <span>02</span>
+              <h3>Key Findings</h3>
+            </div>
+
+            <ol className="research-findings">
+              {report.keyFindings.map(
+                (finding, index) => (
+                  <li key={`${finding}-${index}`}>
+                    <span>{index + 1}</span>
+                    <p>{finding}</p>
+                  </li>
+                ),
+              )}
+            </ol>
+          </section>
+
+          <section className="research-report-section">
+            <div className="research-section-heading">
+              <span>03</span>
+              <h3>Methodology</h3>
+            </div>
+
+            <dl className="research-methodology-grid">
+              <div>
+                <dt>Study design</dt>
+                <dd>
+                  {report.methodology.studyDesign}
+                </dd>
+              </div>
+
+              <div>
+                <dt>Sample or data</dt>
+                <dd>
+                  {report.methodology.sampleOrData}
+                </dd>
+              </div>
+
+              <div>
+                <dt>Procedure</dt>
+                <dd>
+                  {report.methodology.procedure}
+                </dd>
+              </div>
+
+              <div>
+                <dt>Analysis method</dt>
+                <dd>
+                  {report.methodology.analysisMethod}
+                </dd>
+              </div>
+            </dl>
+          </section>
+
+          <section className="research-report-section">
+            <div className="research-section-heading">
+              <span>04</span>
+              <h3>Evidence Map</h3>
+            </div>
+
+            <div className="research-evidence-list">
+              {report.evidenceMap.map(
+                (item, index) => (
+                  <article
+                    className="research-evidence-card"
+                    key={`${item.claim}-${index}`}
+                  >
+                    <div className="research-evidence-heading">
+                      <h4>{item.claim}</h4>
+
+                      <span
+                        className={`research-evidence-badge ${
+                          evidenceClasses[item.strength]
+                        }`}
+                      >
+                        {item.strength}
+                      </span>
+                    </div>
+
+                    <p>{item.evidence}</p>
+
+                    {item.pageReferences.length > 0 && (
+                      <div className="research-page-references">
+                        <FileIcon />
+                        Pages{" "}
+                        {item.pageReferences.join(", ")}
+                      </div>
+                    )}
+                  </article>
+                ),
+              )}
+            </div>
+          </section>
+
+          <section className="research-report-section">
+            <div className="research-section-heading">
+              <span>05</span>
+              <h3>Limitations</h3>
+            </div>
+
+            <ul className="research-limitations">
+              {report.limitations.map(
+                (limitation, index) => (
+                  <li key={`${limitation}-${index}`}>
+                    <span>!</span>
+                    <p>{limitation}</p>
+                  </li>
+                ),
+              )}
+            </ul>
+          </section>
+
+          <section className="research-focus-handoff">
+            <div className="research-focus-icon">
+              <FocusIcon />
+            </div>
+
+            <div>
+              <p className="eyebrow">
+                Continue with Cortex
+              </p>
+
+              <h3>
+                Turn this research into focused work.
+              </h3>
+
+              <p>
+                Cortex will generate a guided session
+                using this report as verified context.
+              </p>
+            </div>
+
+            <button
+              disabled={isStartingFocus}
+              type="button"
+              onClick={onStartFocus}
+            >
+              {isStartingFocus ? (
+                <>
+                  <span className="spinner" />
+                  Creating session...
+                </>
+              ) : (
+                <>
+                  <SparklesIcon />
+                  Start Focus Session
+                </>
+              )}
+            </button>
+          </section>
+
+          {focusError && (
+            <p
+              aria-live="polite"
+              className="research-error"
+            >
+              {focusError}
+            </p>
           )}
-        </ul>
-      </div>
-
-      <div className="mt-6 rounded-xl border border-cyan-800 bg-cyan-950 p-5">
-        <p className="text-sm font-semibold uppercase tracking-wider text-cyan-300">
-          Suggested Focus Task
-        </p>
-
-        <p className="mt-3 leading-7 text-cyan-100">
-          {report.suggestedFocusTask}
-        </p>
-
-        {focusError && (
-          <p className="mt-4 rounded-lg border border-red-800 bg-red-950 p-3 text-sm text-red-300">
-            {focusError}
-          </p>
-        )}
-
-        <button
-          className="mt-5 rounded-lg bg-cyan-400 px-5 py-3 font-semibold text-slate-950 disabled:cursor-not-allowed disabled:opacity-50"
-          disabled={isStartingFocus}
-          type="button"
-          onClick={onStartFocus}
-        >
-          {isStartingFocus
-            ? "Creating Focus Session..."
-            : "Turn into Focus Session"}
-        </button>
+        </div>
       </div>
     </section>
   );

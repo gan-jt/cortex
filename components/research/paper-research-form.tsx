@@ -1,9 +1,16 @@
 "use client";
 
 import {
+  useRef,
   useState,
+  type DragEvent,
   type FormEvent,
 } from "react";
+
+import {
+  FileIcon,
+  SparklesIcon,
+} from "@/components/icons";
 
 interface PaperResearchFormProps {
   error: string | null;
@@ -17,11 +24,24 @@ interface PaperResearchFormProps {
 const DEFAULT_QUESTION =
   "What is the paper's main research question, methodology, key evidence, and most important limitation?";
 
+const MAX_FILE_SIZE = 15 * 1024 * 1024;
+
+function formatFileSize(bytes: number) {
+  if (bytes < 1024 * 1024) {
+    return `${Math.ceil(bytes / 1024)} KB`;
+  }
+
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 export function PaperResearchForm({
   error,
   isAnalyzing,
   onAnalyze,
 }: PaperResearchFormProps) {
+  const inputRef =
+    useRef<HTMLInputElement | null>(null);
+
   const [file, setFile] =
     useState<File | null>(null);
 
@@ -30,6 +50,60 @@ export function PaperResearchForm({
 
   const [formError, setFormError] =
     useState<string | null>(null);
+
+  const [isDragging, setIsDragging] =
+    useState(false);
+
+  function selectFile(selectedFile: File | null) {
+    setFormError(null);
+
+    if (!selectedFile) {
+      setFile(null);
+      return;
+    }
+
+    const isPdf =
+      selectedFile.type === "application/pdf" ||
+      selectedFile.name.toLowerCase().endsWith(".pdf");
+
+    if (!isPdf) {
+      setFile(null);
+      setFormError("Only PDF files are supported.");
+      return;
+    }
+
+    if (selectedFile.size > MAX_FILE_SIZE) {
+      setFile(null);
+      setFormError(
+        "The PDF must be smaller than 15 MB.",
+      );
+      return;
+    }
+
+    setFile(selectedFile);
+  }
+
+  function handleDrop(
+    event: DragEvent<HTMLDivElement>,
+  ) {
+    event.preventDefault();
+    setIsDragging(false);
+
+    if (isAnalyzing) {
+      return;
+    }
+
+    selectFile(event.dataTransfer.files?.[0] ?? null);
+  }
+
+  function removeFile() {
+    setFile(null);
+    setFormError(null);
+
+    if (inputRef.current) {
+      inputRef.current.value = "";
+    }
+  }
 
   async function handleSubmit(
     event: FormEvent<HTMLFormElement>,
@@ -57,62 +131,151 @@ export function PaperResearchForm({
   const displayedError = formError ?? error;
 
   return (
-    <section className="rounded-2xl border border-violet-700 bg-slate-900 p-6 md:p-8">
-      <p className="text-sm font-semibold uppercase tracking-wider text-violet-300">
-        Cortex Research
-      </p>
+    <section className="research-card panel">
+      <div
+        aria-hidden="true"
+        className="research-card-glow"
+      />
 
-      <h2 className="mt-3 text-3xl font-bold text-white">
-        Analyze a Research Paper
-      </h2>
-
-      <p className="mt-3 text-slate-300">
-        Upload a PDF and ask Cortex to identify its
-        research question, methodology, evidence, and
-        limitations.
-      </p>
-
-      <form
-        className="mt-6 space-y-5"
-        onSubmit={handleSubmit}
-      >
+      <div className="research-card-heading">
         <div>
-          <label
-            className="block text-sm font-semibold text-slate-200"
-            htmlFor="research-paper"
-          >
-            Research paper
-          </label>
+          <p className="eyebrow research-eyebrow">
+            Cortex Research
+          </p>
 
-          <input
-            accept=".pdf,application/pdf"
-            className="mt-2 block w-full rounded-lg border border-slate-600 bg-slate-950 p-3 text-sm text-slate-200 file:mr-4 file:rounded-md file:border-0 file:bg-violet-400 file:px-4 file:py-2 file:font-semibold file:text-slate-950"
-            disabled={isAnalyzing}
-            id="research-paper"
-            type="file"
-            onChange={(event) => {
-              setFile(
-                event.target.files?.[0] ?? null,
-              );
-              setFormError(null);
-            }}
-          />
+          <h2>Analyze a Research Paper</h2>
 
-          <p className="mt-2 text-xs text-slate-500">
-            PDF only · Maximum file size: 15 MB
+          <p>
+            Turn a PDF into structured findings,
+            evidence, limitations, and an actionable
+            Focus Session.
           </p>
         </div>
 
-        <div>
-          <label
-            className="block text-sm font-semibold text-slate-200"
-            htmlFor="research-question"
+        <span className="research-ai-pill">
+          <SparklesIcon />
+          Research AI
+        </span>
+      </div>
+
+      <form
+        className="research-form"
+        onSubmit={handleSubmit}
+      >
+        <div className="research-field">
+          <div className="research-label-row">
+            <label htmlFor="research-paper">
+              Research paper
+            </label>
+
+            <span>PDF · Maximum 15 MB</span>
+          </div>
+
+          <div
+            className={[
+              "research-upload-zone",
+              isDragging
+                ? "research-upload-dragging"
+                : "",
+              file ? "research-upload-selected" : "",
+            ]
+              .filter(Boolean)
+              .join(" ")}
+            onDragEnter={(event) => {
+              event.preventDefault();
+
+              if (!isAnalyzing) {
+                setIsDragging(true);
+              }
+            }}
+            onDragOver={(event) => {
+              event.preventDefault();
+            }}
+            onDragLeave={() => {
+              setIsDragging(false);
+            }}
+            onDrop={handleDrop}
           >
-            Research question
-          </label>
+            <input
+              ref={inputRef}
+              accept=".pdf,application/pdf"
+              className="research-file-input"
+              disabled={isAnalyzing}
+              id="research-paper"
+              type="file"
+              onChange={(event) => {
+                selectFile(
+                  event.target.files?.[0] ?? null,
+                );
+              }}
+            />
+
+            {file ? (
+              <div className="research-selected-file">
+                <span className="research-file-icon">
+                  <FileIcon />
+                </span>
+
+                <div>
+                  <strong>{file.name}</strong>
+                  <span>
+                    PDF document ·{" "}
+                    {formatFileSize(file.size)}
+                  </span>
+                </div>
+
+                <div className="research-file-actions">
+                  <label htmlFor="research-paper">
+                    Replace
+                  </label>
+
+                  <button
+                    disabled={isAnalyzing}
+                    type="button"
+                    onClick={removeFile}
+                  >
+                    Remove
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <label
+                className="research-upload-prompt"
+                htmlFor="research-paper"
+              >
+                <span className="research-file-icon">
+                  <FileIcon />
+                </span>
+
+                <div>
+                  <strong>
+                    Drop your research paper here
+                  </strong>
+
+                  <span>
+                    or choose a PDF from your computer
+                  </span>
+                </div>
+
+                <span className="research-choose-button">
+                  Choose PDF
+                </span>
+              </label>
+            )}
+          </div>
+        </div>
+
+        <div className="research-field">
+          <div className="research-label-row">
+            <label htmlFor="research-question">
+              Research question
+            </label>
+
+            <span>{question.length}/2000</span>
+          </div>
 
           <textarea
-            className="mt-2 min-h-32 w-full rounded-lg border border-slate-600 bg-slate-950 p-4 text-white outline-none focus:border-violet-400"
+            className="research-question-input"
             disabled={isAnalyzing}
             id="research-question"
             maxLength={2000}
@@ -122,27 +285,41 @@ export function PaperResearchForm({
               setFormError(null);
             }}
           />
-
-          <p className="mt-2 text-right text-xs text-slate-500">
-            {question.length}/2000
-          </p>
         </div>
 
         {displayedError && (
-          <p className="rounded-lg border border-red-800 bg-red-950 p-3 text-sm text-red-300">
+          <p
+            aria-live="polite"
+            className="research-error"
+          >
             {displayedError}
           </p>
         )}
 
-        <button
-          className="rounded-lg bg-violet-400 px-5 py-3 font-semibold text-slate-950 disabled:cursor-not-allowed disabled:opacity-50"
-          disabled={isAnalyzing}
-          type="submit"
-        >
-          {isAnalyzing
-            ? "Analyzing Paper..."
-            : "Analyze Paper"}
-        </button>
+        <div className="research-submit-row">
+          <p>
+            Cortex will cite relevant pages and separate
+            evidence from interpretation.
+          </p>
+
+          <button
+            className="research-submit"
+            disabled={isAnalyzing}
+            type="submit"
+          >
+            {isAnalyzing ? (
+              <>
+                <span className="spinner" />
+                Analyzing paper...
+              </>
+            ) : (
+              <>
+                <SparklesIcon />
+                Analyze paper
+              </>
+            )}
+          </button>
+        </div>
       </form>
     </section>
   );

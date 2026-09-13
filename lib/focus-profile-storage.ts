@@ -8,6 +8,9 @@ import type { FocusProfile } from "@/types/focus-profile";
 export const FOCUS_PROFILE_STORAGE_KEY =
   "cortex.focus-profile.v1";
 
+const FOCUS_PROFILE_UPDATED_EVENT =
+  "cortex:focus-profile-updated";
+
 const FocusProfileSchema = z.object({
   version: z.literal(1),
   totalXp: z.number().int().nonnegative(),
@@ -110,6 +113,15 @@ export function saveFocusProfile(
     FOCUS_PROFILE_STORAGE_KEY,
     JSON.stringify(validatedProfile),
   );
+
+  window.dispatchEvent(
+    new CustomEvent<FocusProfile>(
+      FOCUS_PROFILE_UPDATED_EVENT,
+      {
+        detail: validatedProfile,
+      },
+    ),
+  );
 }
 
 export function clearFocusProfile() {
@@ -136,15 +148,32 @@ export function subscribeToFocusProfile(
     }
   }
 
+  function handleLocalUpdate(event: Event) {
+    const profileEvent =
+      event as CustomEvent<FocusProfile>;
+
+    listener(profileEvent.detail);
+  }
+
   window.addEventListener(
     "storage",
     handleStorageEvent,
+  );
+
+  window.addEventListener(
+    FOCUS_PROFILE_UPDATED_EVENT,
+    handleLocalUpdate,
   );
 
   return () => {
     window.removeEventListener(
       "storage",
       handleStorageEvent,
+    );
+
+    window.removeEventListener(
+      FOCUS_PROFILE_UPDATED_EVENT,
+      handleLocalUpdate,
     );
   };
 }
