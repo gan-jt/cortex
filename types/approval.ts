@@ -55,4 +55,5 @@ export interface ApprovalDecisionResponse {
 
 export type ApprovalExecutionStatus =
   | "SIMULATED"
+  | "EXECUTED"
   | "NOT_EXECUTED";
