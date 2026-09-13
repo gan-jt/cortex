@@ -213,10 +213,7 @@ export function ApprovalPanel({
             {approvalRecord.resultMessage}
           </p>
 
-          <p className="mt-2 text-sm opacity-75">
-            Execution status:{" "}
-            {approvalRecord.executionStatus}
-          </p>
+          
 
           {approvalRecord.note && (
             <p className="mt-2 text-sm opacity-75">

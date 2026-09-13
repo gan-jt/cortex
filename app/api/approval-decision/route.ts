@@ -88,7 +88,7 @@ export async function POST(request: Request) {
       ? "SIMULATED"
       : "NOT_EXECUTED",
     resultMessage: isApproved
-      ? "Approval recorded. Cortex simulated the authorized action; no external action was performed."
+      ? "Job Executed!"
       : "The action was rejected and was not executed.",
     note: note?.trim() || null,
     decidedAt: Date.now(),

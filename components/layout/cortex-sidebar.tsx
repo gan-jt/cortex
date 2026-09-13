@@ -25,7 +25,7 @@ const NAVIGATION_ITEMS = [
   },
   {
     href: "/research",
-    label: "Paper Research",
+    label: "Research",
     icon: LayersIcon,
   },
   {
