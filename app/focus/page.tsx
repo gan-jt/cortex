@@ -1,7 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import Image from "next/image";
+import { useCompanionSelection } from "@/hooks/use-companion-selection";
+import { CortexSidebar } from "@/components/layout/cortex-sidebar";
+import {
+  useEffect,
+  useState,
+  type CSSProperties,
+} from "react";
 import { useFocusProfile } from "@/hooks/use-focus-profile";
 import { FocusAssistancePanel } from "@/components/focus/focus-assistance-panel";
 import { useFocusAssistant } from "@/hooks/use-focus-assistant";
@@ -9,6 +16,18 @@ import { useFocusAssistant } from "@/hooks/use-focus-assistant";
 import { useFocusLock } from "@/hooks/use-focus-lock";
 import { useFocusSession } from "@/hooks/use-focus-session";
 import { consumeFocusHandoff } from "@/lib/focus-handoff";
+
+import {
+  ArrowIcon,
+  CheckIcon,
+  ClockIcon,
+  FocusIcon,
+  PauseIcon,
+  PlayIcon,
+  ShieldIcon,
+  SparklesIcon,
+  XIcon,
+} from "@/components/icons";
 
 function formatTime(totalSeconds: number) {
   const minutes = Math.floor(totalSeconds / 60);
@@ -19,19 +38,6 @@ function formatTime(totalSeconds: number) {
   ).padStart(2, "0")}`;
 }
 
-const primaryButton =
-  "rounded-lg bg-cyan-400 px-4 py-2 font-semibold text-slate-950 disabled:opacity-50";
-
-const secondaryButton =
-  "rounded-lg border border-slate-600 px-4 py-2 text-white disabled:opacity-50";
-
-const PET_SYMBOLS = {
-  SEED: "●",
-  SPROUT: "✦",
-  COMPANION: "◆",
-  GUARDIAN: "✹",
-} as const;
-
 const ASSISTANCE_BUTTON_LABELS = {
   USER: "Guide me",
   CORTEX: "Draft it",
@@ -41,6 +47,13 @@ const ASSISTANCE_BUTTON_LABELS = {
 export default function FocusPage() {
   const [handoffChecked, setHandoffChecked] =
     useState(false);
+
+  const {
+    companion,
+    companions,
+    selectedId,
+    selectCompanion,
+  } = useCompanionSelection();
 
   const {
     session,
@@ -143,38 +156,47 @@ export default function FocusPage() {
 
   if (!isLoaded || !handoffChecked || !isProfileLoaded) {
     return (
-      <main className="min-h-screen bg-slate-950 p-8 text-white">
-        <p className="text-slate-300">
+      <main className="focus-shell">
+        <CortexSidebar />
+
+        <section className="focus-loading">
+          <span className="spinner" />
           Preparing Focus Workspace...
-        </p>
+        </section>
       </main>
     );
   }
 
   if (!session) {
     return (
-      <main className="min-h-screen bg-slate-950 p-8 text-white">
-        <div className="mx-auto max-w-3xl rounded-2xl border border-slate-700 bg-slate-900 p-8">
-          <p className="text-sm font-semibold uppercase tracking-wider text-cyan-400">
-            Cortex Focus
+      <main className="focus-shell">
+        <CortexSidebar />
+
+        <section className="focus-empty">
+          <div className="focus-empty-icon">
+            <FocusIcon />
+          </div>
+
+          <p className="eyebrow cyan">
+            No Focus Session
           </p>
 
-          <h1 className="mt-3 text-4xl font-bold">
-            No Focus Session
-          </h1>
+          <h1>Route a task through Cortex first.</h1>
 
-          <p className="mt-4 text-slate-300">
-            Submit a complex task from the Cortex task
-            intake page to create a Focus Plan.
+          <p>
+            When a task needs your full attention,
+            Cortex will build a focused plan and send
+            it here.
           </p>
 
           <Link
-            className="mt-6 inline-block rounded-lg bg-cyan-400 px-5 py-3 font-semibold text-slate-950"
+            className="primary-button compact"
             href="/"
           >
             Return to Cortex
+            <ArrowIcon />
           </Link>
-        </div>
+        </section>
       </main>
     );
   }
@@ -182,359 +204,685 @@ export default function FocusPage() {
   const completedSteps =
     session.completedStepOrders.length;
 
+  const companionMotion =
+    session.status === "ACTIVE"
+      ? "is-working"
+      : session.status === "PAUSED"
+        ? "is-paused"
+        : session.status === "COMPLETED"
+          ? "is-celebrating"
+          : "is-idle";
+
+  const totalSteps = session.plan.steps.length;
+
+  const stepProgress =
+    totalSteps > 0
+      ? (completedSteps / totalSteps) * 100
+      : 0;
+
+  const totalFocusSeconds =
+    (session.plan.durationMinutes ?? 45) * 60;
+
+  const remainingPercent = Math.max(
+    0,
+    Math.min(
+      100,
+      (remainingSeconds / totalFocusSeconds) * 100,
+    ),
+  );
+
+  const timerRingDegrees =
+    session.status === "COMPLETED"
+      ? 360
+      : session.status === "CANCELLED"
+        ? 0
+        : remainingPercent * 3.6;
+
+
+  const focusHeading =
+    session.status === "READY"
+      ? "Ready to Focus"
+      : session.status === "ACTIVE"
+        ? "Deep Focus"
+        : session.status === "PAUSED"
+          ? "Take a Breath"
+          : session.status === "COMPLETED"
+            ? "Focus Complete"
+            : "Session Ended";
+
+  const timerModeLabel =
+    session.status === "READY"
+      ? "Ready to focus"
+      : session.status === "ACTIVE"
+        ? "Deep Focus"
+        : session.status === "PAUSED"
+          ? "Focus paused"
+          : session.status === "COMPLETED"
+            ? "Session complete"
+            : "Session cancelled";
+
+  const nextStepOrder =
+    session.plan.steps.find(
+      (step) =>
+        !session.completedStepOrders.includes(
+          step.order,
+        ),
+    )?.order;
+
+  const isSessionFinished =
+    session.status === "COMPLETED" ||
+    session.status === "CANCELLED";
+
+  const streakDays =
+    profile?.currentStreakDays ?? 0;
+
   return (
-    <main className="min-h-screen bg-slate-950 p-6 text-white md:p-10">
-      <div className="mx-auto max-w-5xl space-y-6">
-        <header>
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="text-sm font-semibold uppercase tracking-wider text-cyan-400">
-              Cortex Focus · {session.status}
-            </p>
+    <main className="focus-shell">
+      <CortexSidebar />
+      <div className="ambient ambient-one" />
+      <div className="ambient ambient-two" />
 
-            <Link
-              className="text-sm text-slate-400 hover:text-white"
-              href="/"
-            >
-              Back to Cortex
-            </Link>
-          </div>
+      <header className="focus-topbar focus-session-topbar">
+        <div className="focus-session-heading">
+          <p className="eyebrow cyan">
+            Focus Workspace
+          </p>
 
-          <h1 className="mt-3 text-3xl font-bold md:text-5xl">
-            {session.plan.objective}
+          <strong>
+            Stay with the next clear action.
+          </strong>
+        </div>
+
+        <span
+          className={`session-status ${session.status.toLowerCase()}`}
+        >
+          <i />
+          {session.status}
+        </span>
+      </header>
+
+      <section className="focus-layout">
+        <div className="focus-main panel">
+          <p className="eyebrow cyan">
+            Focus Session
+          </p>
+
+          <h1
+            className="focus-session-title"
+            title={session.plan.objective}
+          >
+            {focusHeading}
           </h1>
 
-          <p className="mt-4 text-lg text-slate-300">
-            First action: {session.plan.firstAction}
+          <p className="focus-task">
+            {session.plan.durationMinutes ?? 45} minutes
+            {" · "}
+            {totalSteps} focused steps
+            {" · "}
+            Cortex-guided session
           </p>
-        </header>
+          <div className="first-action">
+            <span>Start here</span>
+            <strong>
+              {session.plan.firstAction}
+            </strong>
+          </div>
 
-        <section className="rounded-2xl border border-slate-700 bg-slate-900 p-6">
-          <p className="text-center text-6xl font-bold tabular-nums md:text-8xl">
-            {formatTime(remainingSeconds)}
-          </p>
 
-          <div className="mt-6 flex flex-wrap justify-center gap-3">
-            {session.status === "READY" && (
+
+          <div className="focus-timer-stage">
+            <div
+              className={`focus-timer-ring focus-timer-${session.status.toLowerCase()}`}
+              style={
+                {
+                  "--timer-progress": `${timerRingDegrees}deg`,
+                } as CSSProperties
+              }
+            >
+              <div className="focus-timer-ring-inner">
+                <span className="focus-timer-mode">
+                  <ClockIcon />
+                  {timerModeLabel}
+                </span>
+
+                <strong className="focus-timer-value">
+                  {formatTime(remainingSeconds)}
+                </strong>
+
+                <span className="focus-timer-step-status">
+                  {completedSteps} of {totalSteps} steps
+                </span>
+
+                <div className="focus-ring-controls">
+                  {session.status === "READY" && (
+                    <button
+                      className="primary-button focus-ring-primary"
+                      type="button"
+                      onClick={start}
+                    >
+                      <PlayIcon />
+                      Start
+                    </button>
+                  )}
+
+                  {session.status === "ACTIVE" && (
+                    <>
+                      <button
+                        className="secondary-button focus-ring-secondary"
+                        type="button"
+                        onClick={pause}
+                      >
+                        <PauseIcon />
+                        Pause
+                      </button>
+
+                      <button
+                        className="complete-button focus-ring-secondary"
+                        type="button"
+                        onClick={complete}
+                      >
+                        <CheckIcon />
+                        Complete
+                      </button>
+                    </>
+                  )}
+
+                  {session.status === "PAUSED" && (
+                    <>
+                      <button
+                        className="primary-button focus-ring-primary"
+                        type="button"
+                        onClick={resume}
+                      >
+                        <PlayIcon />
+                        Resume
+                      </button>
+
+                      <button
+                        className="complete-button focus-ring-secondary"
+                        type="button"
+                        onClick={complete}
+                      >
+                        <CheckIcon />
+                        Complete
+                      </button>
+                    </>
+                  )}
+
+                  {isSessionFinished && (
+                    <button
+                      className="secondary-button focus-ring-secondary"
+                      type="button"
+                      onClick={handleClearSession}
+                    >
+                      Clear Session
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {!isSessionFinished && (
               <button
-                className={primaryButton}
-                onClick={start}
+                className="focus-end-session"
+                type="button"
+                onClick={cancel}
               >
-                Start Focus
+                <XIcon />
+                End session
               </button>
             )}
+          </div>
+        </div>
 
-            {session.status === "ACTIVE" && (
-              <>
-                <button
-                  className={secondaryButton}
-                  onClick={pause}
-                >
-                  Pause
-                </button>
+        <section className="steps-panel panel">
+          <div className="section-heading compact-heading">
+            <div>
+              <p className="eyebrow">
+                Your Focus Plan
+              </p>
 
-                <button
-                  className={primaryButton}
-                  onClick={complete}
-                >
-                  Complete
-                </button>
-              </>
-            )}
+              <h2>
+                One clear step at a time.
+              </h2>
+            </div>
 
-            {session.status === "PAUSED" && (
-              <>
-                <button
-                  className={primaryButton}
-                  onClick={resume}
-                >
-                  Resume
-                </button>
+            <span className="section-count">
+              {completedSteps}/{totalSteps} complete
+            </span>
+          </div>
 
-                <button
-                  className={secondaryButton}
-                  onClick={complete}
-                >
-                  Complete
-                </button>
-              </>
-            )}
+          {assistanceError && (
+            <p className="focus-error">
+              {assistanceError}
+            </p>
+          )}
 
-            {session.status !== "COMPLETED" &&
-              session.status !== "CANCELLED" && (
-                <button
-                  className={secondaryButton}
-                  onClick={cancel}
-                >
-                  Cancel
-                </button>
-              )}
+          <div className="focus-step-list">
+            {session.plan.steps.map((step) => {
+              const isCompleted =
+                session.completedStepOrders.includes(
+                  step.order,
+                );
 
-            {(session.status === "COMPLETED" ||
-              session.status === "CANCELLED") && (
-                <button
-                  className={secondaryButton}
-                  onClick={handleClearSession}
+              const isCurrent =
+                step.order === nextStepOrder;
+
+              const assistance =
+                assistanceByStep[step.order];
+
+              const isLoadingAssistance =
+                loadingStepOrder === step.order;
+
+              return (
+                <article
+                  className={[
+                    "focus-step-item",
+                    isCompleted
+                      ? "focus-step-completed"
+                      : "",
+                    isCurrent
+                      ? "focus-step-current"
+                      : "",
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
+                  key={step.order}
                 >
-                  Clear Session
-                </button>
-              )}
+                  <button
+                    aria-label={
+                      isCompleted
+                        ? `Mark step ${step.order} incomplete`
+                        : `Complete step ${step.order}`
+                    }
+                    className="focus-step-toggle"
+                    disabled={isSessionFinished}
+                    type="button"
+                    onClick={() =>
+                      toggleStep(step.order)
+                    }
+                  >
+                    {isCompleted ? (
+                      <CheckIcon />
+                    ) : (
+                      String(step.order).padStart(
+                        2,
+                        "0",
+                      )
+                    )}
+                  </button>
+
+                  <div className="focus-step-content">
+                    <div className="focus-step-heading">
+                      <div>
+                        <strong>{step.title}</strong>
+
+                        {isCurrent && (
+                          <span className="current-step-badge">
+                            Current step
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="focus-step-meta">
+                        <span
+                          className={`focus-owner focus-owner-${step.owner.toLowerCase()}`}
+                        >
+                          {step.owner}
+                        </span>
+
+                        <span>
+                          {step.estimatedMinutes} min
+                        </span>
+                      </div>
+                    </div>
+
+                    <p className="focus-step-instruction">
+                      {step.instruction}
+                    </p>
+
+                    {step.cortexSupport && (
+                      <p className="focus-cortex-support">
+                        <SparklesIcon />
+                        {step.cortexSupport}
+                      </p>
+                    )}
+
+                    <p className="focus-done-when">
+                      <CheckIcon />
+                      <span>
+                        <strong>Done when:</strong>{" "}
+                        {step.doneWhen}
+                      </span>
+                    </p>
+
+                    <div className="focus-assistance-slot">
+                      <FocusAssistancePanel
+                        assistance={assistance}
+                        buttonLabel={
+                          ASSISTANCE_BUTTON_LABELS[
+                          step.owner
+                          ]
+                        }
+                        disabled={
+                          isSessionFinished ||
+                          isCompleted ||
+                          !isAssistanceLoaded
+                        }
+                        isLoading={
+                          isLoadingAssistance
+                        }
+                        userContext={
+                          stepContexts[step.order] ??
+                          ""
+                        }
+                        onUserContextChange={(
+                          value,
+                        ) => {
+                          setStepContext(
+                            step.order,
+                            value,
+                          );
+                        }}
+                        onRequest={() => {
+                          void requestAssistance({
+                            sessionId: session.id,
+                            taskDescription:
+                              session.taskDescription,
+                            objective:
+                              session.plan.objective,
+                            step: {
+                              order: step.order,
+                              title: step.title,
+                              owner: step.owner,
+                              instruction:
+                                step.instruction,
+                              cortexSupport:
+                                step.cortexSupport,
+                              doneWhen:
+                                step.doneWhen,
+                            },
+                            userContext:
+                              stepContexts[
+                                step.order
+                              ]?.trim() ||
+                              undefined,
+                          });
+                        }}
+                        onClear={() =>
+                          clearStepAssistance(
+                            step.order,
+                          )
+                        }
+                      />
+                    </div>
+                  </div>
+                </article>
+              );
+            })}
           </div>
         </section>
 
-        <div className="grid gap-6 md:grid-cols-[2fr_1fr]">
-          <section className="rounded-2xl border border-slate-700 bg-slate-900 p-6">
-            <div className="flex items-center justify-between gap-4">
-              <h2 className="text-2xl font-bold">
-                Focus Steps
-              </h2>
+        <section className="focus-tools-grid">
+          <article className="focus-tool-card panel">
+            <div className="focus-tool-heading">
+              <span className="focus-tool-icon lock-icon">
+                <ShieldIcon />
+              </span>
 
-              <p className="text-slate-400">
-                {completedSteps}/{session.plan.steps.length}
-              </p>
-            </div>
-
-            <div className="mt-5 space-y-4">
-              {assistanceError && (
-                <p className="rounded-lg bg-red-950 p-3 text-sm text-red-300">
-                  {assistanceError}
+              <div>
+                <p className="eyebrow">
+                  Distraction control
                 </p>
-              )}
-
-              {session.plan.steps.map((step) => {
-                const isCompleted =
-                  session.completedStepOrders.includes(step.order);
-
-                const isSessionFinished =
-                  session.status === "COMPLETED" ||
-                  session.status === "CANCELLED";
-
-                const assistance =
-                  assistanceByStep[step.order];
-
-                const isLoadingAssistance =
-                  loadingStepOrder === step.order;
-
-                return (
-                  <article
-                    className="rounded-xl border border-slate-700 p-4"
-                    key={step.order}
-                  >
-                    <div className="flex gap-4">
-                      <input
-                        aria-label={`Complete step ${step.order}`}
-                        className="mt-1"
-                        type="checkbox"
-                        checked={isCompleted}
-                        disabled={isSessionFinished}
-                        onChange={() => toggleStep(step.order)}
-                      />
-
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <strong>
-                            {step.order}. {step.title}
-                          </strong>
-
-                          <span className="rounded-full bg-slate-800 px-2 py-1 text-xs text-cyan-300">
-                            {step.owner}
-                          </span>
-
-                          <span className="text-xs text-slate-500">
-                            {step.estimatedMinutes} min
-                          </span>
-                        </div>
-
-                        <p className="mt-2 text-slate-300">
-                          {step.instruction}
-                        </p>
-
-                        <p className="mt-2 text-sm text-slate-500">
-                          Done when: {step.doneWhen}
-                        </p>
-
-                        <FocusAssistancePanel
-                          assistance={assistance}
-                          buttonLabel={
-                            ASSISTANCE_BUTTON_LABELS[step.owner]
-                          }
-                          disabled={isSessionFinished || isCompleted || !isAssistanceLoaded}
-                          isLoading={isLoadingAssistance}
-                          userContext={
-                            stepContexts[step.order] ?? ""
-                          }
-                          onUserContextChange={(value) => {
-                            setStepContext(step.order, value);
-                          }}
-                          onRequest={() => {
-                            void requestAssistance({
-                              sessionId: session.id,
-                              taskDescription:
-                                session.taskDescription,
-                              objective: session.plan.objective,
-                              step: {
-                                order: step.order,
-                                title: step.title,
-                                owner: step.owner,
-                                instruction: step.instruction,
-                                cortexSupport:
-                                  step.cortexSupport,
-                                doneWhen: step.doneWhen,
-                              },
-                              userContext:
-                                stepContexts[step.order]?.trim() ||
-                                undefined,
-                            });
-                          }}
-                          onClear={() =>
-                            clearStepAssistance(step.order)
-                          }
-                        />
-                      </div>
-                    </div>
-                  </article>
-                );
-              })}
+                <h2>Focus Lock</h2>
+              </div>
             </div>
-          </section>
 
-          <aside className="space-y-6">
-            <section className="rounded-2xl border border-slate-700 bg-slate-900 p-6">
-              <h2 className="text-xl font-bold">
-                Focus Lock
-              </h2>
-
-              <div className="mt-4 space-y-2 text-sm text-slate-300">
-                <p>
-                  Extension:{" "}
+            <div className="focus-lock-status">
+              <div>
+                <span>Extension</span>
+                <strong
+                  className={
+                    isAvailable
+                      ? "status-positive"
+                      : "status-muted"
+                  }
+                >
                   {isConnecting
                     ? "Checking..."
                     : isAvailable
                       ? "Connected"
                       : "Unavailable"}
-                </p>
+                </strong>
+              </div>
 
-                <p>
-                  Blocking:{" "}
-                  {lockState?.enabled ? "ON" : "OFF"}
-                </p>
+              <div>
+                <span>Blocking</span>
+                <strong
+                  className={
+                    lockState?.enabled
+                      ? "status-positive"
+                      : "status-muted"
+                  }
+                >
+                  {lockState?.enabled
+                    ? "Active"
+                    : "Off"}
+                </strong>
+              </div>
 
-                <p>
-                  Blocked attempts:{" "}
+              <div>
+                <span>Blocked attempts</span>
+                <strong>
                   {lockState?.blockedAttempts ?? 0}
-                </p>
+                </strong>
               </div>
-
-              {lockError && (
-                <p className="mt-4 rounded-lg bg-red-950 p-3 text-sm text-red-300">
-                  {lockError}
-                </p>
-              )}
-
-              <button
-                className="mt-4 text-sm text-cyan-400"
-                onClick={refreshFocusLock}
-              >
-                Refresh extension
-              </button>
-            </section>
-
-            <section className="rounded-2xl border border-violet-700 bg-slate-900 p-6">
-              <h2 className="text-xl font-bold">
-                Cortex Companion
-              </h2>
-
-              <div className="mt-5 text-center">
-                <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-full bg-violet-500 text-5xl shadow-[0_0_45px_rgba(139,92,246,0.55)]">
-                  {PET_SYMBOLS[progress.petStage]}
-                </div>
-
-                <p className="mt-4 text-lg font-bold text-violet-200">
-                  {progress.petStage}
-                </p>
-
-                <p className="text-sm text-slate-400">
-                  Level {progress.level}
-                </p>
-              </div>
-
-              <div className="mt-5 h-2 overflow-hidden rounded-full bg-slate-800">
-                <div
-                  className="h-full bg-violet-400 transition-all"
-                  style={{
-                    width: `${progress.levelProgressPercent}%`,
-                  }}
-                />
-              </div>
-
-              <div className="mt-3 flex justify-between text-sm text-slate-400">
-                <span>{profile?.totalXp ?? 0} total XP</span>
-
-                <span>
-                  {progress.xpIntoLevel}/
-                  {progress.xpForNextLevel}
-                </span>
-              </div>
-
-              <div className="mt-5 grid grid-cols-2 gap-3 text-center">
-                <div className="rounded-lg bg-slate-950 p-3">
-                  <p className="text-xl font-bold">
-                    {profile?.completedSessions ?? 0}
-                  </p>
-                  <p className="text-xs text-slate-500">
-                    Sessions
-                  </p>
-                </div>
-
-                <div className="rounded-lg bg-slate-950 p-3">
-                  <p className="text-xl font-bold">
-                    {profile?.currentStreakDays ?? 0}
-                  </p>
-                  <p className="text-xs text-slate-500">
-                    Day streak
-                  </p>
-                </div>
-              </div>
-            </section>
-
-            <section className="rounded-2xl border border-slate-700 bg-slate-900 p-6">
-              <h2 className="text-xl font-bold">
-                Blocked Sites
-              </h2>
-
-              <ul className="mt-4 space-y-2 text-sm text-slate-300">
-                {session.blockedDomains.map((domain) => (
-                  <li key={domain}>{domain}</li>
-                ))}
-              </ul>
-            </section>
-          </aside>
-        </div>
-
-        {reward && session.status === "COMPLETED" && (
-          <section className="rounded-2xl border border-emerald-700 bg-emerald-950 p-8 text-center">
-            <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-full bg-emerald-400 text-4xl shadow-[0_0_60px_rgba(52,211,153,0.6)]">
-              ✦
             </div>
 
-            <h2 className="mt-5 text-3xl font-bold">
-              Focus Complete
-            </h2>
+            {lockError && (
+              <p className="focus-error">
+                {lockError}
+              </p>
+            )}
 
-            <p className="mt-2 text-xl text-emerald-200">
-              +{lastRewardReceipt?.xpAwarded ?? reward.xpEarned} XP
-            </p>
-            <p className="mt-2 text-sm text-emerald-300">
-              Level {progress.level} · {progress.petStage}
-            </p>
+            <button
+              className="focus-text-button"
+              type="button"
+              onClick={refreshFocusLock}
+            >
+              Refresh extension
+              <ArrowIcon />
+            </button>
+          </article>
 
-            <p className="mt-2 text-sm text-emerald-300">
-              {reward.completedSteps}/{reward.totalSteps}{" "}
-              steps completed · {reward.focusMinutes} focus
-              minutes
-            </p>
-          </section>
-        )}
-      </div>
+          <article className="focus-tool-card focus-companion-card panel">
+            <div className="focus-tool-heading">
+              <span className="focus-tool-icon companion-icon">
+                <SparklesIcon />
+              </span>
+
+              <div>
+                <p className="eyebrow">
+                  Your companion
+                </p>
+
+                <h2>{companion.name}</h2>
+
+                <p className="companion-personality">
+                  {companion.personality}
+                </p>
+              </div>
+            </div>
+
+            <div
+              className={`focus-companion-portrait ${companionMotion}`}
+              style={{
+                borderColor: companion.accent,
+                boxShadow: `0 0 42px ${companion.glow}`,
+              }}
+            >
+              <Image
+                priority
+                alt={`${companion.name}, ${companion.personality} companion`}
+                height={170}
+                src={companion.image}
+                width={170}
+              />
+            </div>
+
+            <div
+              aria-label="Choose your companion"
+              className="focus-companion-picker"
+              role="radiogroup"
+            >
+              {companions.map((item) => {
+                const isSelected =
+                  item.id === selectedId;
+
+                return (
+                  <button
+                    aria-checked={isSelected}
+                    aria-label={`Choose ${item.name}, ${item.personality}`}
+                    className={`focus-companion-option ${isSelected ? "is-selected" : ""
+                      }`}
+                    key={item.id}
+                    role="radio"
+                    style={
+                      isSelected
+                        ? {
+                          borderColor: item.accent,
+                          boxShadow: `0 0 18px ${item.glow}`,
+                        }
+                        : undefined
+                    }
+                    type="button"
+                    onClick={() => {
+                      selectCompanion(item.id);
+                    }}
+                  >
+                    <Image
+                      alt=""
+                      height={52}
+                      src={item.image}
+                      width={52}
+                    />
+
+                    <strong>{item.name}</strong>
+                    <span>{item.personality}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="focus-level-row">
+              <span>
+                Level {progress.level}
+              </span>
+
+              <span>
+                {progress.xpIntoLevel}/
+                {progress.xpForNextLevel} XP
+              </span>
+            </div>
+
+            <div className="focus-level-progress">
+              <span
+                style={{
+                  width: `${progress.levelProgressPercent}%`,
+                }}
+              />
+            </div>
+
+            <div className="focus-profile-stats">
+              <div>
+                <strong>
+                  {profile?.completedSessions ?? 0}
+                </strong>
+                <span>Sessions</span>
+              </div>
+
+              <div>
+                <strong>{streakDays}</strong>
+                <span>
+                  {streakDays === 1
+                    ? "Day streak"
+                    : "Days streak"}
+                </span>
+              </div>
+            </div>
+          </article>
+
+          <article className="focus-tool-card panel">
+            <div className="focus-tool-heading">
+              <span className="focus-tool-icon blocked-icon">
+                <FocusIcon />
+              </span>
+
+              <div>
+                <p className="eyebrow">
+                  Protected space
+                </p>
+                <h2>Blocked Sites</h2>
+              </div>
+            </div>
+
+            {session.blockedDomains.length > 0 ? (
+              <ul className="focus-domain-list">
+                {session.blockedDomains.map(
+                  (domain) => (
+                    <li key={domain}>
+                      <span />
+                      {domain}
+                    </li>
+                  ),
+                )}
+              </ul>
+            ) : (
+              <p className="focus-empty-domains">
+                No blocked domains were configured for
+                this session.
+              </p>
+            )}
+          </article>
+        </section>
+
+        {reward &&
+          session.status === "COMPLETED" && (
+            <section className="focus-reward-panel panel">
+              <span className="focus-reward-icon">
+                ✦
+              </span>
+
+              <div>
+                <p className="eyebrow">
+                  Session complete
+                </p>
+
+                <h2>
+                  You moved the work forward.
+                </h2>
+
+                <p>
+                  {reward.completedSteps}/
+                  {reward.totalSteps} steps completed ·{" "}
+                  {reward.focusMinutes} focus minutes
+                </p>
+              </div>
+
+              <div className="focus-reward-xp">
+                <strong>
+                  +
+                  {lastRewardReceipt?.xpAwarded ??
+                    reward.xpEarned}
+                </strong>
+
+                <span>
+                  XP · Level {progress.level}
+                </span>
+              </div>
+            </section>
+          )}
+      </section>
     </main>
   );
 }

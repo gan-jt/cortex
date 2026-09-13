@@ -5,36 +5,98 @@ import {
   useState,
 } from "react";
 
+import { CortexSidebar } from "@/components/layout/cortex-sidebar";
+import { DashboardOverview } from "@/components/dashboard/dashboard-overview";
+import { RoutingConversation } from "@/components/dashboard/routing-conversation";
+import { DashboardCommandBar } from "@/components/dashboard/dashboard-command-bar";
+import { ResearchEntryCard } from "@/components/dashboard/research-entry-card";
+
+import Image from "next/image";
+import { useCompanionSelection } from "@/hooks/use-companion-selection";
+
 import { ApprovalHistory } from "@/components/approval/approval-history";
 import { ApprovalPanel } from "@/components/approval/approval-panel";
-import { PaperResearchForm } from "@/components/research/paper-research-form";
-import { ResearchReportPanel } from "@/components/research/research-report-panel";
+import {
+  ArrowIcon,
+  CheckIcon,
+  FocusIcon,
+  ShieldIcon,
+  SparklesIcon,
+  ZapIcon,
+} from "@/components/icons";
 import { ClarificationPanel } from "@/components/task/clarification-panel";
 import { useApprovalDecision } from "@/hooks/use-approval-decision";
-import { usePaperResearch } from "@/hooks/use-paper-research";
+import { useFocusProfile } from "@/hooks/use-focus-profile";
 import { useTaskSubmission } from "@/hooks/use-task-submission";
+
+type CortexMode = "AUTO" | "APPROVAL" | "FOCUS";
 
 const EXAMPLE_TASKS = [
   {
-    label: "AUTO example",
+    mode: "AUTO" as const,
+    label: "Summarize this note",
     description:
       "Summarize this note in one sentence: Cortex automatically handles simple tasks, requests approval for risky actions, and turns complex work into focused sessions.",
   },
   {
-    label: "APPROVAL example",
+    mode: "APPROVAL" as const,
+    label: "Send a project update",
     description:
-      "Send the project update email to the team.",
+      "Send this email to cortex-team@example.com. Subject: Cortex beta launch update. Body: The Focus workflow and website blocking features are ready for team testing. Please send feedback by Monday.",
   },
   {
-    label: "FOCUS example",
+    mode: "FOCUS" as const,
+    label: "Build a launch strategy",
     description:
       "Create a 45-minute launch strategy session for Cortex, a productivity app for college students. The goal is to recruit 50 beta users in two weeks using campus clubs and Instagram with a $200 budget. I need channel priorities, key messages, and success metrics.",
   },
 ];
 
+const ROUTING_MODES = [
+  {
+    mode: "AUTO" as const,
+    title: "Automatic execution",
+    detail:
+      "Clear, low-risk tasks are completed by Cortex with a verification checklist.",
+    status: "Ready",
+  },
+  {
+    mode: "APPROVAL" as const,
+    title: "Controlled action",
+    detail:
+      "External or irreversible actions stop for human review before execution.",
+    status: "Protected",
+  },
+  {
+    mode: "FOCUS" as const,
+    title: "Guided focus",
+    detail:
+      "Complex work becomes a structured session with steps, assistance, and Focus Lock.",
+    status: "Focused",
+  },
+];
+
+function modeIcon(mode: CortexMode) {
+  if (mode === "AUTO") {
+    return <ZapIcon />;
+  }
+
+  if (mode === "APPROVAL") {
+    return <ShieldIcon />;
+  }
+
+  return <FocusIcon />;
+}
+
 export default function Home() {
   const [description, setDescription] =
-    useState<string>("");
+    useState("");
+
+  const [showExamples, setShowExamples] =
+    useState(false);
+
+  const { companion } =
+    useCompanionSelection();
 
   const {
     result,
@@ -56,14 +118,9 @@ export default function Home() {
   } = useApprovalDecision();
 
   const {
-    report: researchReport,
-    error: researchError,
-    focusError,
-    isAnalyzing,
-    isCreatingFocus,
-    analyzePaper,
-    startFocusFromReport,
-  } = usePaperResearch();
+    profile,
+    progress,
+  } = useFocusProfile();
 
   const clarificationQuestions =
     result?.clarificationQuestions ??
@@ -79,7 +136,7 @@ export default function Home() {
     try {
       await submitTask(description);
     } catch {
-      // The hook exposes the error for display below.
+      // The hook exposes the error for display.
     }
   }
 
@@ -103,299 +160,520 @@ export default function Home() {
     try {
       await submitTask(expandedDescription);
     } catch {
-      // The submission hook displays the error.
+      // The hook exposes the error for display.
     }
   }
 
+  function selectExample(
+    example: (typeof EXAMPLE_TASKS)[number],
+  ) {
+    setDescription(example.description);
+    setShowExamples(false);
+    clearResult();
+    clearDecision();
 
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
+  }
 
   return (
-    <main className="min-h-screen bg-slate-950 px-6 py-12 text-white">
-      <div className="mx-auto max-w-5xl">
-        <header>
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-cyan-400">
-            Cortex
-          </p>
+    <main className="app-shell">
+      <CortexSidebar />
+      <div
+        aria-hidden="true"
+        className="ambient ambient-one"
+      />
 
-          <h1 className="mt-4 max-w-3xl text-4xl font-bold md:text-6xl">
-            Turn any task into the right kind of work.
-          </h1>
+      <div
+        aria-hidden="true"
+        className="ambient ambient-two"
+      />
 
-          <p className="mt-5 max-w-2xl text-lg text-slate-300">
-            Cortex decides whether to execute automatically,
-            request approval, or create a guided Focus
-            Session.
-          </p>
+      <section
+        className="dashboard"
+        id="top"
+      >
+        <header className="topbar">
+          <div>
+            <p className="eyebrow">
+              COMMAND CENTER
+            </p>
+
+            <h1>Welcome back, Leo</h1>
+
+            <p>
+              Ready to route your next task?
+            </p>
+          </div>
+
+          <div className="topbar-actions">
+            <DashboardCommandBar />
+            <span className="system-status">
+              <i />
+              Cortex AI · Online
+            </span>
+
+            <span className="avatar">L</span>
+          </div>
         </header>
 
-        <section className="mt-10 rounded-2xl border border-slate-700 bg-slate-900 p-6 md:p-8">
-          <form onSubmit={handleSubmit}>
-            <label
-              className="text-lg font-semibold"
-              htmlFor="task-description"
-            >
-              What do you need to get done?
-            </label>
+        <div className="dashboard-grid">
+          <section className="task-card panel">
+            <div className="task-card-glow" />
 
-            <textarea
-              id="task-description"
-              className="mt-4 min-h-48 w-full rounded-xl border border-slate-700 bg-slate-950 p-5 text-lg text-white outline-none placeholder:text-slate-600 focus:border-cyan-400"
-              value={description}
-              placeholder="Describe the task, desired result, context, and constraints..."
-              onChange={(event) => {
-                setDescription(event.target.value);
-                clearResult();
-                clearDecision();
-              }}
-            />
+            <div className="card-heading">
+              <div>
+                <p className="eyebrow cyan">
+                  ASK CORTEX
+                </p>
 
-            <div className="mt-4 flex flex-wrap gap-3">
-              {EXAMPLE_TASKS.map((example) => (
-                <button
-                  className="rounded-full border border-slate-700 px-3 py-2 text-sm text-slate-300 hover:border-cyan-400 hover:text-cyan-300"
-                  key={example.label}
-                  type="button"
-                  onClick={() => {
-                    setDescription(example.description);
-                    clearResult();
-                    clearDecision();
-                  }}
-                >
-                  {example.label}
-                </button>
-              ))}
+                <h2>
+                  What do you need to get done?
+                </h2>
+
+                <p>
+                  Cortex chooses the right mode
+                  before any work begins.
+                </p>
+              </div>
+
+              <span className="ai-pill">
+                <SparklesIcon />
+                Cortex AI
+              </span>
             </div>
 
-            <button
-              className="mt-6 rounded-lg bg-cyan-400 px-6 py-3 font-bold text-slate-950 disabled:cursor-not-allowed disabled:opacity-50"
-              type="submit"
-              disabled={
-                isSubmitting || !description.trim()
-              }
-            >
-              {isSubmitting
-                ? "Cortex is routing..."
-                : "Route Task"}
-            </button>
-          </form>
-        </section>
+            <form onSubmit={handleSubmit}>
+              <label
+                className="sr-only"
+                htmlFor="task-description"
+              >
+                Describe your task
+              </label>
 
-        {error && (
-          <section className="mt-6 rounded-xl border border-red-800 bg-red-950 p-5 text-red-200">
-            {error}
-          </section>
-        )}
+              <textarea
+                id="task-description"
+                placeholder="Describe a task, decision, or something you're stuck on..."
+                rows={5}
+                value={description}
+                onChange={(event) => {
+                  setDescription(
+                    event.target.value,
+                  );
+                  clearResult();
+                  clearDecision();
+                }}
+              />
 
-        {result && (
-          <div className="mt-6 space-y-6">
-            <section className="rounded-2xl border border-slate-700 bg-slate-900 p-6">
-              <div className="flex flex-wrap items-center gap-3">
-                <span className="rounded-full bg-cyan-950 px-3 py-1 text-sm font-bold text-cyan-300">
-                  {result.decision.mode}
-                </span>
+              <div className="composer-actions">
+                <button
+                  className="secondary-button"
+                  type="button"
+                  onClick={() => {
+                    setShowExamples(
+                      (current) => !current,
+                    );
+                  }}
+                >
+                  <SparklesIcon />
+                  Examples
+                </button>
 
-                <span className="rounded-full bg-slate-800 px-3 py-1 text-sm text-slate-300">
-                  {result.status}
-                </span>
-
-                <span className="text-sm text-slate-400">
-                  {Math.round(
-                    result.decision.confidence * 100,
+                <button
+                  className="primary-button"
+                  disabled={
+                    isSubmitting ||
+                    !description.trim()
+                  }
+                  type="submit"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <span className="spinner" />
+                      Cortex is routing...
+                    </>
+                  ) : (
+                    <>
+                      Route task
+                      <ArrowIcon />
+                    </>
                   )}
-                  % confidence
-                </span>
+                </button>
               </div>
+            </form>
 
-              <h2 className="mt-5 text-2xl font-bold">
-                Routing Decision
-              </h2>
+            <div
+              className={`example-drawer ${showExamples
+                ? "example-drawer-open"
+                : ""
+                }`}
+            >
+              {EXAMPLE_TASKS.map(
+                (example) => (
+                  <button
+                    className={`example-chip ${example.mode.toLowerCase()}`}
+                    key={example.mode}
+                    type="button"
+                    onClick={() => {
+                      selectExample(example);
+                    }}
+                  >
+                    <span>{example.mode}</span>
+                    {example.label}
+                  </button>
+                ),
+              )}
+            </div>
 
-              <p className="mt-3 text-slate-300">
-                {result.decision.reason}
-              </p>
-
-              <div className="mt-5 grid gap-3 sm:grid-cols-3">
-                <div className="rounded-lg bg-slate-950 p-4">
-                  <p className="text-sm text-slate-500">
-                    Complexity
-                  </p>
-                  <p className="mt-1 text-xl font-bold">
-                    {result.decision.complexity}/5
-                  </p>
-                </div>
-
-                <div className="rounded-lg bg-slate-950 p-4">
-                  <p className="text-sm text-slate-500">
-                    Risk
-                  </p>
-                  <p className="mt-1 text-xl font-bold">
-                    {result.decision.riskLevel}
-                  </p>
-                </div>
-
-                <div className="rounded-lg bg-slate-950 p-4">
-                  <p className="text-sm text-slate-500">
-                    Routing source
-                  </p>
-                  <p className="mt-1 text-xl font-bold">
-                    {result.routingSource}
-                  </p>
-                </div>
+            {error && (
+              <div className="error-banner">
+                {error}
               </div>
-            </section>
+            )}
 
-            {result.status === "NEEDS_CLARIFICATION" &&
-              clarificationQuestions.length > 0 && (
-                <ClarificationPanel
-                  key={result.task.description}
-                  questions={clarificationQuestions}
-                  isSubmitting={isSubmitting}
-                  onContinue={(details) => {
-                    void handleClarification(details);
-                  }}
-                />
-              )}
+            {(isSubmitting || result) && (
+              <RoutingConversation
+                key={
+                  isSubmitting
+                    ? `routing-${description}`
+                    : `result-${result?.status}`
+                }
+                taskDescription={
+                  result?.task.description ??
+                  description
+                }
+                isSubmitting={isSubmitting}
+                mode={result?.decision.mode}
+                status={result?.status}
+                reason={result?.decision.reason}
+              />
+            )}
 
-            {result.status === "WAITING_APPROVAL" &&
-              result.approvalPreview && (
-                <ApprovalPanel
-                  key={result.approvalPreview.id}
-                  preview={result.approvalPreview}
-                  approvalRecord={approvalRecord}
-                  error={approvalError}
-                  isSubmitting={isApprovalSubmitting}
-                  onApprove={(note) => {
-                    void submitDecision({
-                      preview:
-                        result.approvalPreview!,
-                      decision: "APPROVED",
-                      note,
-                    });
-                  }}
-                  onReject={(note) => {
-                    void submitDecision({
-                      preview:
-                        result.approvalPreview!,
-                      decision: "REJECTED",
-                      note,
-                    });
-                  }}
-                />
-              )}
+            {result && (
+              <section
+                className={`routing-result mode-${result.decision.mode.toLowerCase()}`}
+                id="routing-result"
+              >
+                <div className="result-topline">
+                  <span
+                    className={`mode-badge ${result.decision.mode.toLowerCase()}`}
+                  >
+                    {modeIcon(
+                      result.decision.mode,
+                    )}
+                    {result.decision.mode}
+                  </span>
 
-            {result.status === "COMPLETED" &&
-              result.execution && (
-                <section className="rounded-2xl border border-emerald-800 bg-emerald-950 p-6">
-                  <p className="text-sm font-semibold uppercase tracking-wider text-emerald-300">
-                    Automatically completed
-                  </p>
+                  <span className="result-status">
+                    {result.status.replaceAll(
+                      "_",
+                      " ",
+                    )}
+                  </span>
 
-                  <h2 className="mt-3 text-2xl font-bold">
-                    {result.execution.title}
-                  </h2>
+                  <span className="confidence">
+                    {Math.round(
+                      result.decision
+                        .confidence * 100,
+                    )}
+                    % confidence
+                  </span>
+                </div>
 
-                  <p className="mt-3 text-emerald-100">
-                    {result.execution.summary}
-                  </p>
+                <h3>Routing Decision</h3>
 
-                  <div className="mt-5 whitespace-pre-wrap rounded-xl bg-slate-950 p-5 text-slate-200">
-                    {result.execution.output}
-                  </div>
+                <p className="decision-reason">
+                  {result.decision.reason}
+                </p>
 
-                  {result.execution
-                    .verificationChecklist.length >
-                    0 && (
-                      <div className="mt-5">
-                        <h3 className="font-bold">
-                          Verification
-                        </h3>
+                {result.status ===
+                  "NEEDS_CLARIFICATION" &&
+                  clarificationQuestions.length >
+                  0 && (
+                    <ClarificationPanel
+                      key={
+                        result.task.description
+                      }
+                      questions={
+                        clarificationQuestions
+                      }
+                      isSubmitting={
+                        isSubmitting
+                      }
+                      onContinue={(details) => {
+                        void handleClarification(
+                          details,
+                        );
+                      }}
+                    />
+                  )}
 
-                        <ul className="mt-2 list-disc space-y-1 pl-5 text-emerald-100">
-                          {result.execution.verificationChecklist.map(
-                            (item) => (
-                              <li key={item}>
-                                {item}
-                              </li>
-                            ),
-                          )}
-                        </ul>
+                {result.status ===
+                  "WAITING_APPROVAL" &&
+                  result.approvalPreview && (
+                    <ApprovalPanel
+                      key={
+                        result.approvalPreview.id
+                      }
+                      preview={
+                        result.approvalPreview
+                      }
+                      approvalRecord={
+                        approvalRecord
+                      }
+                      error={approvalError}
+                      isSubmitting={
+                        isApprovalSubmitting
+                      }
+                      onApprove={(note) => {
+                        void submitDecision({
+                          preview:
+                            result.approvalPreview!,
+                          decision:
+                            "APPROVED",
+                          note,
+                        });
+                      }}
+                      onReject={(note) => {
+                        void submitDecision({
+                          preview:
+                            result.approvalPreview!,
+                          decision:
+                            "REJECTED",
+                          note,
+                        });
+                      }}
+                    />
+                  )}
+
+                {result.status ===
+                  "COMPLETED" &&
+                  result.execution && (
+                    <div className="execution-panel">
+                      <div className="subpanel-heading">
+                        <CheckIcon />
+
+                        <div>
+                          <strong>
+                            {
+                              result.execution
+                                .title
+                            }
+                          </strong>
+
+                          <span>
+                            {
+                              result.execution
+                                .summary
+                            }
+                          </span>
+                        </div>
                       </div>
-                    )}
-                </section>
-              )}
 
-            {result.status ===
-              "WAITING_APPROVAL" && (
-                <section className="rounded-2xl border border-amber-700 bg-amber-950 p-6">
-                  <p className="text-sm font-semibold uppercase tracking-wider text-amber-300">
-                    Approval required
-                  </p>
+                      <div className="output-block">
+                        {
+                          result.execution
+                            .output
+                        }
+                      </div>
 
-                  <h2 className="mt-3 text-2xl font-bold">
-                    Cortex stopped before the external action.
-                  </h2>
+                      <div className="verification-list">
+                        {result.execution.verificationChecklist.map(
+                          (item) => (
+                            <span key={item}>
+                              <CheckIcon />
+                              {item}
+                            </span>
+                          ),
+                        )}
+                      </div>
+                    </div>
+                  )}
 
-                  <p className="mt-3 text-amber-100">
-                    Review and approve the action before it is
-                    executed.
-                  </p>
-                </section>
-              )}
+                {result.status ===
+                  "FOCUS_READY" && (
+                    <div className="focus-preview">
+                      <p className="decision-reason">
+                        Opening your Focus
+                        Workspace...
+                      </p>
+                    </div>
+                  )}
+              </section>
+            )}
+          </section>
 
-            {result.status ===
-              "NEEDS_CLARIFICATION" && (
-                <section className="rounded-2xl border border-violet-700 bg-violet-950 p-6">
-                  <p className="text-sm font-semibold uppercase tracking-wider text-violet-300">
-                    More information needed
-                  </p>
+          <aside className="momentum-card panel">
+            <div className="momentum-heading">
+              <div>
+                <span className="bars">
+                  <i />
+                  <i />
+                  <i />
+                </span>
 
-                  <h2 className="mt-3 text-2xl font-bold">
-                    Clarify these points
-                  </h2>
+                <h2>Momentum</h2>
+              </div>
 
-                  <ul className="mt-4 list-disc space-y-2 pl-5 text-violet-100">
-                    {clarificationQuestions.map(
-                      (question) => (
-                        <li key={question}>
-                          {question}
-                        </li>
-                      ),
-                    )}
-                  </ul>
-                </section>
-              )}
-          </div>
-        )}
+              <span className="level-pill">
+                Level {progress.level}
+              </span>
+            </div>
 
-        <div className="mt-10 space-y-6">
-          <PaperResearchForm
-            error={researchError}
-            isAnalyzing={isAnalyzing}
-            onAnalyze={analyzePaper}
-          />
+            <div className="companion-scene">
+              <div className="speech-bubble">
+                One step at a time.
+                <br />
+                <strong>
+                  You&apos;ve got this.
+                </strong>
+              </div>
 
-          {researchReport && (
-            <ResearchReportPanel
-              report={researchReport}
-              focusError={focusError}
-              isStartingFocus={isCreatingFocus}
-              onStartFocus={() => {
-                void startFocusFromReport(
-                  researchReport,
-                );
-              }}
-            />
-          )}
+              <div
+                className="momentum-selected-companion"
+                style={{
+                  filter: `drop-shadow(0 0 24px ${companion.glow})`,
+                }}
+              >
+                <Image
+                  priority
+                  alt={`${companion.name}, ${companion.personality} companion`}
+                  height={180}
+                  src={companion.image}
+                  width={180}
+                />
+              </div>
+            </div>
+
+            <div className="streak-row">
+              <span className="streak-icon">
+                ◆
+              </span>
+
+              <div>
+                <span>Focus streak</span>
+
+                <strong>
+                  {profile?.currentStreakDays ??
+                    0}{" "}
+                  days
+                </strong>
+              </div>
+            </div>
+
+            <div className="xp-label">
+              <span>
+                {progress.xpIntoLevel} XP
+              </span>
+
+              <span>
+                {progress.xpForNextLevel} XP
+              </span>
+            </div>
+
+            <div className="xp-bar">
+              <span
+                style={{
+                  width: `${progress.levelProgressPercent}%`,
+                }}
+              />
+            </div>
+
+            <p className="xp-note">
+              <SparklesIcon />
+              {progress.petStage} companion ·{" "}
+              {profile?.completedSessions ?? 0}{" "}
+              completed sessions
+            </p>
+          </aside>
         </div>
 
-        <div className="mt-10">
+        <DashboardOverview />
+
+        <section
+          className="workstream-section"
+          id="workstream"
+        >
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">
+                ROUTING MODES
+              </p>
+
+              <h2>
+                Every task, in the right mode.
+              </h2>
+            </div>
+
+            <span className="section-count">
+              3 available paths
+            </span>
+          </div>
+
+          <div className="workstream-grid">
+            {ROUTING_MODES.map((item) => (
+              <article
+                className={`work-card ${item.mode.toLowerCase()}`}
+                key={item.mode}
+              >
+                <div className="work-card-header">
+                  <span
+                    className={`mode-badge ${item.mode.toLowerCase()}`}
+                  >
+                    {modeIcon(item.mode)}
+                    {item.mode}
+                  </span>
+                </div>
+
+                <h3>{item.title}</h3>
+
+                <p>{item.detail}</p>
+
+                <div className="work-card-footer">
+                  <span>
+                    <i />
+                    {item.status}
+                  </span>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const example =
+                        EXAMPLE_TASKS.find(
+                          (candidate) =>
+                            candidate.mode ===
+                            item.mode,
+                        );
+
+                      if (example) {
+                        selectExample(example);
+                      }
+                    }}
+                  >
+                    Try example
+                    <ArrowIcon />
+                  </button>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <ResearchEntryCard />
+
+        <section
+          className="workstream-section"
+          id="approval-history"
+        >
           <ApprovalHistory
             records={history}
             isLoaded={isHistoryLoaded}
             onClear={clearHistory}
           />
-        </div>
-      </div>
+        </section>
+      </section>
     </main>
   );
 }

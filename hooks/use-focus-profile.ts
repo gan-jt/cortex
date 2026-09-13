@@ -64,10 +64,19 @@ export function useFocusProfile() {
 
     return subscribeToFocusProfile(
       (nextProfile) => {
-        setState((currentState) => ({
-          ...currentState,
-          profile: nextProfile,
-        }));
+        setState((currentState) => {
+          if (
+            currentState.profile?.updatedAt ===
+            nextProfile.updatedAt
+          ) {
+            return currentState;
+          }
+
+          return {
+            ...currentState,
+            profile: nextProfile,
+          };
+        });
       },
     );
   }, [isLoaded]);
